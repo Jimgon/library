@@ -12,23 +12,11 @@ class AdminSetupController extends Controller
 {
     public function showCreateForm()
     {
-        if ($this->adminExists()) {
-            return redirect()->route('login')->withErrors([
-                'email' => 'An admin account already exists. Please sign in.',
-            ]);
-        }
-
         return view('auth.create-admin');
     }
 
     public function create(Request $request)
     {
-        if ($this->adminExists()) {
-            return redirect()->route('login')->withErrors([
-                'email' => 'An admin account already exists. Please sign in.',
-            ]);
-        }
-
         $data = $request->validate([
             'email' => 'required|email|unique:system_users,email',
             'password' => 'required|min:6|confirmed',
@@ -44,10 +32,5 @@ class AdminSetupController extends Controller
         $request->session()->regenerate();
 
         return redirect()->route('dashboard');
-    }
-
-    private function adminExists(): bool
-    {
-        return SystemUser::where('role', 'admin')->exists();
     }
 }
