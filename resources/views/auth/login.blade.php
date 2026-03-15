@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>SNHS Library System - Login</title>
-
+ <link rel="icon" type="image/png" href="{{ asset('images/snhs-logo.png') }}">
     <!-- Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -118,7 +118,8 @@
                     <div class="mb-6 rounded-lg border-l-4 border-red-500 bg-red-50
                                 dark:border-red-700 dark:bg-red-950/30 px-5 py-4 text-sm text-red-700 dark:text-red-400">
                         <div class="flex items-start gap-3">
-                            <i class="fas fa-exclamation-circle flex-shrink-0 mt-0.5"></i>
+                            <i class="fas fa-exclamation-circle 
+                            shrink-0 mt-0.5"></i>
                             <ul class="space-y-1 flex-1">
                                 @foreach ($errors->all() as $error)
                                     <li>{{ $error }}</li>
@@ -177,10 +178,10 @@
                         <i class="fas fa-sign-in-alt mr-2"></i>Login
                     </button>
                 </form>
-
+{{-- 
                 <div class="mt-6 text-center text-sm text-muted">
                     <a href="{{ route('admin.create') }}" class="text-primary hover:underline">Create admin account</a>
-                </div>
+                </div> --}}
 
             </div>
         </div>

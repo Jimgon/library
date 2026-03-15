@@ -1,4 +1,10 @@
 @if($items->count() > 0)
+    <style>
+        .archive-table table tr[data-href]:hover {
+            background-color: #e0e7ff !important;
+            cursor: pointer;
+        }
+    </style>
     <div class="archive-table" data-type="{{ $type }}">
     {{-- Search Form for archive table --}}
     <form class="row g-2 mb-3" method="GET" action="{{ url()->current() }}">
@@ -38,7 +44,8 @@
                     <th>Title</th>
                     <th>Author</th>
                     <th>ISBN</th>
-                    <th>Status</th>
+                    <th>Ctrl #</th>
+                    <th>Condition</th>
                 @elseif($type === 'student')
                     <th>First Name</th>
                     <th>Last Name</th>
@@ -58,7 +65,7 @@
         </thead>
         <tbody>
             @foreach($items as $item)
-                <tr>
+                <tr @if($type === 'book' && !empty($item->ctrl_number)) data-href="#" @endif>
                     <td>
                         <input type="checkbox" class="archive-checkbox" data-restore-url="{{ route('utilities.restore', [$type, $item->id ?? $item->id]) }}" data-delete-url="{{ route('utilities.delete', [$type, $item->id ?? $item->id]) }}" aria-label="Select {{ $type }}">
                     </td>
@@ -66,7 +73,8 @@
                         <td>{{ $item->title ?? 'N/A' }}</td>
                         <td>{{ $item->author ?? 'N/A' }}</td>
                         <td>{{ $item->isbn ?? 'N/A' }}</td>
-                        <td>{{ $item->status ?? 'N/A' }}</td>
+                        <td>{{ $item->ctrl_number && $item->ctrl_number !== '' ? $item->ctrl_number : 'N/A' }}</td>
+                        <td>{{ $item->condition && $item->condition !== '' ? $item->condition : 'N/A' }}</td>
                     @elseif($type === 'student')
                         <td>{{ $item->first_name ?? 'N/A' }}</td>
                         <td>{{ $item->last_name ?? 'N/A' }}</td>

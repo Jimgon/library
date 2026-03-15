@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Book;
 use App\Models\Borrow;
+use App\Models\LostDamagedItem;
 use Illuminate\Support\Facades\DB;
 use App\Models\Teacher;
 
@@ -14,7 +15,7 @@ class TeacherBorrowController extends Controller
     {
         $settings = DB::table('penalty_settings')->first();
         // teachers come from dedicated Teacher model
-        $teachers = \App\Models\Teacher::whereNull('deleted_at')->orderBy('name')->get();
+        $teachers = Teacher::whereNull('deleted_at')->orderBy('name')->get();
         $books = Book::all()->filter(function($book) {
             return $book->available_copies > 0;
         });
@@ -67,13 +68,14 @@ class TeacherBorrowController extends Controller
                 'due_date' => $request->due_date,
                 'returned_at' => null,
                 'role' => 'teacher',
+                'copy_number' => $book->control_numbers[0] ?? null,
             ]);
 
-            $book->available_copies = max(0, ($book->available_copies ?? 0) - 1);
-            if ($book->available_copies < 1) {
-                $book->status = 'borrowed';
-            }
-            $book->save();
+            $newCopies = max(0, ($book->copies ?? 1) - 1);
+            $book->update([
+                'copies' => $newCopies,
+                'status' => $newCopies < 1 ? 'borrowed' : $book->status,
+            ]);
 
             $success++;
         }
@@ -109,6 +111,22 @@ class TeacherBorrowController extends Controller
         $inputRemark = trim((string) $request->input('remark', ''));
         $borrow->remark = $inputRemark !== '' ? $inputRemark : $computedRemark;
         $borrow->notes = trim(($borrow->notes ? $borrow->notes . "\n" : '') . $request->input('notes', ''));
+        
+        // Record lost or damaged items
+        if ($borrow->remark === 'Lost' || $borrow->remark === 'Damage') {
+            LostDamagedItem::create([
+                'borrow_id' => $borrow->id,
+                'book_id' => $borrow->book_id,
+                'user_id' => $borrow->user_id,
+                'type' => $borrow->remark === 'Lost' ? 'lost' : 'damaged',
+                'copy_number' => $borrow->copy_number ?? 'BK-' . $borrow->book_id,
+                'remarks' => $borrow->notes,
+                'due_date' => $borrow->due_date,
+                'status' => 'active',
+                'role' => 'teacher',
+            ]);
+        }
+        
         $borrow->returned_at = now();
         $borrow->save();
 

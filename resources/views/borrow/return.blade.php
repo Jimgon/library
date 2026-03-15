@@ -1,74 +1,157 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container">
-    <h3 class="mb-3">Return Borrowed Books</h3>
-
-    {{-- Notifications --}}
-    @if(session('success') || session('error'))
-        <div id="notification" class="position-fixed top-50 start-50 translate-middle p-3 rounded text-white" 
-             style="z-index: 1050; min-width: 300px; text-align:center; 
-                    background-color: {{ session('success') ? '#28a745' : '#dc3545' }};
-                    animation: popup 0.5s ease-out forwards;">
-            {{ session('success') ?? session('error') }}
+<div class="container-fluid">
+    {{-- Header Section --}}
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+        <div>
+            <h4 class="mb-0">Return Borrowed Books</h4>
         </div>
-
-        <style>
-            @keyframes popup {
-                0% { transform: translate(-50%, -60%) scale(0); opacity: 0; }
-                60% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
-                100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-            }
-        </style>
-
-        <script>
-            setTimeout(() => {
-                const notif = document.getElementById('notification');
-                if(notif) notif.style.display = 'none';
-            }, 3000);
-        </script>
-    @endif
-
-    <div class="d-flex mb-3" style="gap:.5rem;align-items:center;">
-        <input id="returnSearch" type="search" class="form-control" placeholder="Search borrower or book..." aria-label="Search returns">
-        <button id="clearReturnSearch" type="button" class="btn btn-outline-secondary">Clear</button>
     </div>
 
-    <table class="table table-bordered">
-        <thead class="thead-dark">
+    {{-- Success Notification --}}
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    {{-- Error Notification --}}
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    {{-- Search and Filter Form --}}
+    <div class="mb-4 p-3 bg-light rounded border">
+        <div class="row g-2 mb-3">
+            <div class="col-md-6">
+                <input id="returnSearch" type="search" class="form-control" placeholder="Search borrower or book..." aria-label="Search returns">
+            </div>
+            <div class="col-md-3">
+                <div class="d-flex gap-2">
+                    <button id="filterAll" type="button" class="btn btn-primary source-filter-btn" data-filter="all" style="flex: 1;">All</button>
+                    <button id="filterPersonal" type="button" class="btn btn-outline-dark source-filter-btn" data-filter="personal" style="flex: 1;">Personal</button>
+                    <button id="filterDistribution" type="button" class="btn btn-outline-dark source-filter-btn" data-filter="distribution" style="flex: 1;">Distribution</button>
+                </div>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <a href="{{ route('borrow.receipt.all') }}" target="_blank" class="btn btn-outline-dark" style="white-space: nowrap; text-decoration: none;"><i class="bi bi-printer me-1"></i>Print All</a>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @media print {
+            .container-fluid > div:first-child,
+            .mb-4,
+            .bg-light,
+            #returnSelectedBtn,
+            #clearSelectionBtn,
+            .modal,
+            .modal-backdrop,
+            input[type="checkbox"],
+            .no-print {
+                display: none !important;
+            }
+            .table {
+                font-size: 11px;
+            }
+            .table th, .table td {
+                padding: 6px 8px;
+            }
+            .btn {
+                display: none !important;
+            }
+            a.btn {
+                display: none !important;
+            }
+            body {
+                margin: 0;
+                padding: 10px;
+                background: white;
+            }
+        }
+    </style>
+
+    {{-- Tabs for Student/Teacher Returns --}}
+    <ul class="nav nav-tabs mb-4" id="returnTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="student-return-tab" data-bs-toggle="tab" data-bs-target="#student-returns" type="button" role="tab" aria-controls="student-returns" aria-selected="true">
+                Student Returns
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="teacher-return-tab" data-bs-toggle="tab" data-bs-target="#teacher-returns" type="button" role="tab" aria-controls="teacher-returns" aria-selected="false">
+                Teacher Returns
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="returnTabContent">
+        {{-- Student Returns Tab --}}
+        <div class="tab-pane fade show active" id="student-returns" role="tabpanel" aria-labelledby="student-return-tab">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Student Pending Returns</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
             <tr>
-                <th style="width: 40px;">
-                    <input type="checkbox" id="selectAllCheckbox" aria-label="Select all">
+                <th class="border-0 fw-semibold" style="width: 40px;">
+                    <input type="checkbox" id="selectAllCheckboxStudent" class="form-check-input" aria-label="Select all">
                 </th>
-                <th>Borrower</th>
-                <th>Book</th>
-                <th>Type</th>
-                <th>Borrow Date</th>
-                <th>Due Date</th>
-                <th>Remarks</th>
-                <th>Notes</th>
-                <th>Action</th>
+                <th class="border-0 fw-semibold">Borrower</th>
+                <th class="border-0 fw-semibold">Book</th>
+                <th class="border-0 fw-semibold d-none d-lg-table-cell">Book Source</th>
+                <th class="border-0 fw-semibold d-none d-md-table-cell">Borrow Date</th>
+                <th class="border-0 fw-semibold d-none d-lg-table-cell">Due Date</th>
+                <th class="border-0 fw-semibold">Control #</th>
+                <th class="border-0 fw-semibold">Status</th>
+                <th class="border-0 fw-semibold">Remarks</th>
+                <th class="border-0 fw-semibold text-center">Actions</th>
             </tr>
         </thead>
         <tbody>
         @php
-            // Group borrows by user_id, book_id, and borrowed_at date
-            $grouped = $borrows->groupBy(function($borrow) {
+            // Separate student and teacher borrows
+            // Include NULL roles as students (for legacy borrow records)
+            $studentBorrows = $borrows->filter(function($borrow) {
+                return $borrow->role !== 'teacher';
+            });
+            $teacherBorrows = $borrows->where('role', 'teacher');
+            
+            // Group student borrows by user_id, book_id, borrowed_at date, AND origin
+            $groupedStudents = $studentBorrows->groupBy(function($borrow) {
                 $borrowDate = $borrow->borrowed_at ? \Carbon\Carbon::parse($borrow->borrowed_at)->format('Y-m-d') : 'unknown';
-                return $borrow->user_id . '|' . $borrow->book_id . '|' . $borrowDate;
+                return $borrow->user_id . '|' . $borrow->book_id . '|' . $borrowDate . '|' . ($borrow->origin ?? 'personal');
             })->map(function($group) {
                 return [
                     'borrows' => $group,
                     'count' => $group->count(),
                     'firstBorrow' => $group->first()
                 ];
+            })->filter(function($transaction) {
+                return $transaction['borrows']->whereNull('returned_at')->count() > 0;
             });
+            
+            $grouped = $groupedStudents;
         @endphp
         
         @forelse($grouped as $transaction)
             @php
-                $borrow = $transaction['firstBorrow'];
-                $quantity = $transaction['count'];
+                // Only show unreturned borrows in this transaction
+                $unreturned = $transaction['borrows']->whereNull('returned_at');
+                $borrow = $unreturned->first();
+                $quantity = $unreturned->count();
+                
+                // Skip if no unreturned borrows
+                if (!$borrow) continue;
                 
                 // Use borrowed_at if available, otherwise use created_at as fallback
                 $borrowedAt = null;
@@ -111,15 +194,11 @@
 
             <tr class="borrow-row">
                 <td>
-                    <input type="checkbox" class="borrow-checkbox" data-borrow-id="{{ $borrow->id }}" data-quantity="{{ $quantity }}" aria-label="Select this transaction">
+                    <input type="checkbox" class="borrow-checkbox form-check-input" data-borrow-id="{{ $borrow->id }}" data-quantity="{{ $quantity }}" aria-label="Select this transaction">
                 </td>
                 <td>
                     @php
-                        $borrower = $borrow->user;
-                        if (!$borrower) {
-                            // Try to load from Teacher model if not found in User model
-                            $borrower = \App\Models\Teacher::find($borrow->user_id);
-                        }
+                        $borrower = \App\Models\User::find($borrow->user_id);
                     @endphp
                     @if($borrower)
                         {{ $borrower->name ?? (($borrower->first_name ?? 'Unknown') . ' ' . ($borrower->last_name ?? '')) }}
@@ -130,269 +209,623 @@
                 <td>
                     @php
                         $bookTitle = 'Book not found';
-                        $bookType = 'Student';
+                        $bookSource = '';
             
                         if ($borrow->book) {
                             $bookTitle = $borrow->book->title;
+                            $bookSource = ($borrow->origin ?? '') === 'distribution' ? 'Distribution' : 'Personal';
                         } else {
                             $distBook = \App\Models\DistributedBook::find($borrow->book_id);
                             if ($distBook) {
                                 $bookTitle = $distBook->title;
-                                $bookType = 'Teacher';
+                                $bookSource = 'Distribution';
                             }
                         }
                     @endphp
                     {{ $bookTitle }}
                 </td>
+                <td class="d-none d-lg-table-cell"><small>{{ $bookSource }}</small></td>
+                <td class="d-none d-md-table-cell"><small>{{ $borrowedAt ? $borrowedAt->format('Y-m-d') : 'N/A' }}</small></td>
+                <td class="d-none d-lg-table-cell"><small>{{ $dueDate ? $dueDate->format('Y-m-d') : 'N/A' }}</small></td>
+
+                {{-- Control # column --}}
                 <td>
-                    <div class="d-flex gap-2 align-items-center flex-wrap">
-                        <span class="badge {{ $bookType === 'Distribution' ? 'bg-info' : 'bg-secondary' }}">
-                            {{ $bookType }}
-                        </span>
-                        <span class="badge bg-primary">{{ $quantity }}x</span>
-                        <small class="text-muted">
-                            <strong>Return:</strong>
-                            <input type="number" class="returnQuantity" min="0" max="{{ $quantity }}" value="{{ $quantity }}" style="width: 50px; padding: 3px; border: 1px solid #ccc; border-radius: 4px;">
-                        </small>
+                    @if($quantity > 1)
+                    <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#ctrlModal_{{ $borrow->id }}">
+                        <i class="bi bi-list-check me-1"></i>Show ({{ $quantity }})
+                    </button>
+                    @else
+                    {{-- For single copy, show control number directly --}}
+                    @if($borrow->copy_number)
+                        <span class="text-black"><span style="font-family: monospace;">Ctrl#: {{ $borrow->copy_number }}</span></span>
+                    @else
+                        <span class="text-muted">N/A</span>
+                    @endif
+                    @endif
+                </td>
+
+                {{-- Status & Remarks --}}
+                <td>
+                    @php
+                        $statusClass = 'text-success';
+                        $statusText = 'On Time';
+                        
+                        if ($dueDate && $today->gt($dueDate)) {
+                            $statusClass = 'text-danger';
+                            $statusText = 'Overdue';
+                        }
+                    @endphp
+                    <span class="{{ $statusClass }} fw-semibold">{{ $statusText }}</span>
+                </td>
+
+                {{-- Remarks Column --}}
+                <td>
+                    @php $selected = old('remark', $borrow->remark ?? ''); @endphp
+                    <select name="remark" class="form-select form-select-sm remark-select" aria-label="Set remark">
+                        <option value="No Remarks" {{ $selected === 'No Remarks' ? 'selected' : '' }}>No Remarks</option>
+                        <option value="On Time" {{ $selected === 'On Time' ? 'selected' : '' }}>On Time</option>
+                        <option value="Late Return" {{ $selected === 'Late Return' ? 'selected' : '' }}>Late Return</option>
+                        <option value="Lost" {{ $selected === 'Lost' ? 'selected' : '' }}>Lost</option>
+                        <option value="Damage" {{ $selected === 'Damage' ? 'selected' : '' }}>Damage</option>
+                    </select>
+                </td>
+
+                {{-- Actions --}}
+                <td class="text-center">
+                    <form action="{{ route('borrow.return.process', $borrow->id) }}" method="POST" class="d-flex gap-1 justify-content-center flex-wrap return-form" data-quantity="{{ $quantity }}">
+                        @csrf
+                        
+                        {{-- Hidden checkboxes for form submission (synced with modal) --}}
+                        <div style="display: none;">
+                            @php $ctrlIndex = 0; @endphp
+                            @foreach($unreturned as $b)
+                                <input type="checkbox" class="borrow-id-checkbox" name="borrow_ids[]" value="{{ $b->id }}" checked>
+                                @php $ctrlIndex++; @endphp
+                            @endforeach
+                        </div>
+                        
+                        {{-- Hidden input for quantity being returned --}}
+                        <input type="hidden" name="quantity_returned" class="quantity-returned-input" value="{{ $quantity }}">
+                        <input type="hidden" name="remark" class="remark-hidden-input" value="{{ $selected }}">
+                        
+                        <button type="submit" class="btn btn-sm btn-success return-btn" title="Process return">
+                            <i class="bi bi-check-circle me-1"></i>Return
+                        </button>
+                        <a href="{{ route('borrow.receipt', $borrow->id) }}" target="_blank" class="btn btn-sm btn-outline-dark" title="Print receipt">
+                            <i class="bi bi-printer me-1"></i>Print
+                        </a>
+                    </form>
+                </td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="10" class="text-center py-4">
+                    <div class="text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                        No student books to return.
                     </div>
                 </td>
-                <td>{{ $borrowedAt ? $borrowedAt->format('Y-m-d') : 'N/A' }}</td>
-                <td>{{ $dueDate ? $dueDate->format('Y-m-d') : 'N/A' }}</td>
+            </tr>
+        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center p-3 border-top">
+            <div>
+                <button id="clearSelectionBtnStudent" type="button" class="btn btn-outline-secondary" style="display: none;">
+                    <i class="bi bi-x-circle me-1"></i>Clear Selection
+                </button>
+            </div>
+            <div>
+                <button id="returnSelectedBtnStudent" type="button" class="btn btn-success" style="display: none;">
+                    <i class="bi bi-check-circle me-1"></i>Return Selected (<span id="selectedCountStudent">0</span>)
+                </button>
+            </div>
+        </div>
+            </div>
+        </div>
+        </div>
 
-                {{-- Remarks column --}}
+        {{-- Teacher Returns Tab --}}
+        <div class="tab-pane fade" id="teacher-returns" role="tabpanel" aria-labelledby="teacher-return-tab">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Teacher Pending Returns</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+            <tr>
+                <th class="border-0 fw-semibold" style="width: 40px;">
+                    <input type="checkbox" id="selectAllCheckboxTeacher" class="form-check-input" aria-label="Select all">
+                </th>
+                <th class="border-0 fw-semibold">Borrower</th>
+                <th class="border-0 fw-semibold">Book</th>
+                <th class="border-0 fw-semibold d-none d-lg-table-cell">Book Source</th>
+                <th class="border-0 fw-semibold d-none d-md-table-cell">Borrow Date</th>
+                <th class="border-0 fw-semibold d-none d-lg-table-cell">Due Date</th>
+                <th class="border-0 fw-semibold">Control #</th>
+                <th class="border-0 fw-semibold">Status</th>
+                <th class="border-0 fw-semibold">Remarks</th>
+                <th class="border-0 fw-semibold text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        @php
+            // Group teacher borrows by user_id, book_id, borrowed_at date, AND origin
+            $groupedTeachers = $teacherBorrows->groupBy(function($borrow) {
+                $borrowDate = $borrow->borrowed_at ? \Carbon\Carbon::parse($borrow->borrowed_at)->format('Y-m-d') : 'unknown';
+                return $borrow->user_id . '|' . $borrow->book_id . '|' . $borrowDate . '|' . ($borrow->origin ?? 'personal');
+            })->map(function($group) {
+                return [
+                    'borrows' => $group,
+                    'count' => $group->count(),
+                    'firstBorrow' => $group->first()
+                ];
+            })->filter(function($transaction) {
+                return $transaction['borrows']->whereNull('returned_at')->count() > 0;
+            });
+            
+            $grouped = $groupedTeachers;
+        @endphp
+        
+        @forelse($grouped as $transaction)
+            @php
+                // Only show unreturned borrows in this transaction
+                $unreturned = $transaction['borrows']->whereNull('returned_at');
+                $borrow = $unreturned->first();
+                $quantity = $unreturned->count();
+                
+                // Skip if no unreturned borrows
+                if (!$borrow) continue;
+                
+                // Use borrowed_at if available, otherwise use created_at as fallback
+                $borrowedAt = null;
+                if ($borrow->borrowed_at) {
+                    $borrowedAt = \Carbon\Carbon::parse($borrow->borrowed_at);
+                } elseif ($borrow->created_at) {
+                    $borrowedAt = \Carbon\Carbon::parse($borrow->created_at);
+                }
+                
+                // Use due_date if available, otherwise calculate from borrowed_at
+                $dueDate = null;
+                if ($borrow->due_date) {
+                    $dueDate = \Carbon\Carbon::parse($borrow->due_date);
+                } elseif ($borrowedAt) {
+                    // Teachers get 12 months to return
+                    $dueDate = $borrowedAt->addMonths(12);
+                }
+                
+                $today = \Carbon\Carbon::today();
+
+                $overdueDays = 0;
+                $computedRemark = 'No Remarks';
+                if ($dueDate && $today->gt($dueDate)) {
+                    $overdueDays = $today->diffInDays($dueDate);
+                    $computedRemark = "{$overdueDays} day(s) overdue";
+                }
+
+                $teacher = \App\Models\Teacher::find($borrow->user_id);
+                $remark = !empty($borrow->remark) ? $borrow->remark : $computedRemark;
+
+                $lower = strtolower($remark);
+                // Red for overdue, lost, damage; Green for everything else
+                if (str_contains($lower, 'overdue') || $lower === 'lost' || $lower === 'damage') {
+                    $badgeClass = 'bg-danger';
+                } else {
+                    $badgeClass = 'bg-success';
+                }
+            @endphp
+
+            <tr class="borrow-row-teacher">
                 <td>
-                    <form action="{{ route('borrow.return.process', $borrow->id) }}" method="POST" class="d-flex flex-column gap-2 return-form" data-quantity="{{ $quantity }}">
+                    <input type="checkbox" class="borrow-checkbox-teacher form-check-input" data-borrow-id="{{ $borrow->id }}" data-quantity="{{ $quantity }}" aria-label="Select this transaction">
+                </td>
+                <td>
+                    @if($teacher)
+                        {{ $teacher->name ?? 'Unknown' }}
+                    @else
+                        Unknown
+                    @endif
+                </td>
+                <td>
+                    @php
+                        $bookTitle = 'Book not found';
+                        $bookSource = '';
+            
+                        if ($borrow->book) {
+                            $bookTitle = $borrow->book->title;
+                            $bookSource = ($borrow->origin ?? '') === 'distribution' ? 'Distribution' : 'Personal';
+                        } else {
+                            $distBook = \App\Models\DistributedBook::find($borrow->book_id);
+                            if ($distBook) {
+                                $bookTitle = $distBook->title;
+                                $bookSource = 'Distribution';
+                            }
+                        }
+                    @endphp
+                    {{ $bookTitle }}
+                </td>
+                <td class="d-none d-lg-table-cell"><small>{{ $bookSource }}</small></td>
+                <td class="d-none d-md-table-cell"><small>{{ $borrowedAt ? $borrowedAt->format('Y-m-d') : 'N/A' }}</small></td>
+                <td class="d-none d-lg-table-cell"><small>{{ $dueDate ? $dueDate->format('Y-m-d') : 'N/A' }}</small></td>
+
+                {{-- Control # column --}}
+                <td>
+                    @if($quantity > 1)
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#ctrlModal_{{ $borrow->id }}">
+                            View ({{ $quantity }})
+                        </button>
+                    @else
+                        <span class="badge bg-light text-dark">{{ $borrow->copy_number ?? 'N/A' }}</span>
+                    @endif
+                </td>
+
+                {{-- Status & Remarks --}}
+                <td>
+                    <span class="badge {{ $badgeClass }}">
+                        @if(str_contains(strtolower($remark), 'overdue'))
+                            Overdue
+                        @elseif($remark === 'Lost')
+                            Lost
+                        @elseif($remark === 'Damage')
+                            Damaged
+                        @else
+                            Normal
+                        @endif
+                    </span>
+                </td>
+
+                {{-- Remarks Column --}}
+                <td>
+                    <span class="text-muted small">{{ $remark }}</span>
+                </td>
+
+                {{-- Actions --}}
+                <td class="text-center">
+                    <form action="{{ route('borrow.return.process', $borrow->id) }}" method="POST" class="d-flex gap-1 justify-content-center flex-wrap return-form" data-quantity="{{ $quantity }}">
                         @csrf
-                        @php $selected = old('remark', $borrow->remark ?? ''); @endphp
                         
-                        {{-- Add hidden inputs for all borrow IDs in this transaction --}}
-                        @foreach($transaction['borrows'] as $b)
-                            <input type="hidden" name="borrow_ids[]" value="{{ $b->id }}">
-                        @endforeach
+                        {{-- Hidden checkboxes for form submission (synced with modal) --}}
+                        <div style="display: none;">
+                            @php $ctrlIndex = 0; @endphp
+                            @foreach($unreturned as $b)
+                                <input type="checkbox" class="borrow-id-checkbox" name="borrow_ids[]" value="{{ $b->id }}" checked>
+                                @php $ctrlIndex++; @endphp
+                            @endforeach
+                        </div>
                         
                         {{-- Hidden input for quantity being returned --}}
                         <input type="hidden" name="quantity_returned" class="quantity-returned-input" value="{{ $quantity }}">
                         
-                        <select name="remark" class="form-select form-select-sm" aria-label="Set remark">
+                        {{-- Remark selector --}}
+                        @php $selected = old('remark', $borrow->remark ?? ''); @endphp
+                        <select name="remark" class="form-select form-select-sm remark-select" aria-label="Set remark" style="width: auto;">
                             <option value="No Remarks" {{ $selected === 'No Remarks' ? 'selected' : '' }}>No Remarks</option>
                             <option value="On Time" {{ $selected === 'On Time' ? 'selected' : '' }}>On Time</option>
                             <option value="Late Return" {{ $selected === 'Late Return' ? 'selected' : '' }}>Late Return</option>
                             <option value="Lost" {{ $selected === 'Lost' ? 'selected' : '' }}>Lost</option>
                             <option value="Damage" {{ $selected === 'Damage' ? 'selected' : '' }}>Damage</option>
                         </select>
-                </td>
-
-                {{-- Notes column --}}
-                <td>
-                        @if($borrow->notes)
-                            <div class="small text-muted mb-2">
-                                <strong>Existing Notes:</strong><br>
-                                {{ $borrow->notes }}
-                            </div>
-                        @endif
-                        <textarea name="notes" class="form-control form-control-sm" rows="2" placeholder="Add additional notes..." maxlength="500">{{ old('notes', '') }}</textarea>
-                </td>
-
-                <td>
-                            <button type="submit" class="btn btn-success btn-sm return-btn">Return <span class="return-quantity">{{ $quantity }}</span></button>
-                        </form>
-
-                        {{-- Print Receipt --}}
-                        <a href="{{ route('borrow.receipt', $borrow->id) }}" target="_blank" class="btn btn-primary btn-sm mt-1">
-                            Print Receipt
+                        
+                        <button type="submit" class="btn btn-sm btn-success return-btn" title="Process return">
+                            <i class="bi bi-check-circle me-1"></i>Return
+                        </button>
+                        <a href="{{ route('borrow.receipt', $borrow->id) }}" target="_blank" class="btn btn-sm btn-outline-dark" title="Print receipt">
+                            <i class="bi bi-printer me-1"></i>Print
                         </a>
+                    </form>
                 </td>
             </tr>
         @empty
             <tr>
-                <td colspan="9" class="text-center py-4">No books to return.</td>
+                <td colspan="10" class="text-center py-4">
+                    <div class="text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                        No teacher books to return.
+                    </div>
+                </td>
             </tr>
         @endforelse
-    </table>
-    <div class="mt-3 d-flex gap-2">
-        <button id="returnSelectedBtn" type="button" class="btn btn-success" style="display: none;">
-            Return Selected (<span id="selectedCount">0</span>)
-        </button>
-        <button id="clearSelectionBtn" type="button" class="btn btn-outline-secondary" style="display: none;">
-            Clear Selection
-        </button>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center p-3 border-top">
+            <div>
+                <button id="clearSelectionBtnTeacher" type="button" class="btn btn-outline-secondary" style="display: none;">
+                    <i class="bi bi-x-circle me-1"></i>Clear Selection
+                </button>
+            </div>
+            <div>
+                <button id="returnSelectedBtnTeacher" type="button" class="btn btn-success" style="display: none;">
+                    <i class="bi bi-check-circle me-1"></i>Return Selected (<span id="selectedCountTeacher">0</span>)
+                </button>
+            </div>
+        </div>
+            </div>
+        </div>
+        </div>
     </div>
+    {{-- Control Numbers Modals for Both Student and Teacher Borrows --}}
+    @php
+        // Collect all borrows from both student and teacher collections
+        $allBorrows = $borrows->all();
+    @endphp
+    
+    @foreach($allBorrows as $borrow)
+        @php
+            // Get the quantity of unreturned borrows with same user, book, and date
+            $borrowDate = $borrow->borrowed_at ? \Carbon\Carbon::parse($borrow->borrowed_at)->format('Y-m-d') : 'unknown';
+            $similarBorrows = collect($allBorrows)->filter(function($b) use ($borrow, $borrowDate) {
+                $bDate = $b->borrowed_at ? \Carbon\Carbon::parse($b->borrowed_at)->format('Y-m-d') : 'unknown';
+                return $b->user_id === $borrow->user_id 
+                    && $b->book_id === $borrow->book_id 
+                    && $bDate === $borrowDate
+                    && is_null($b->returned_at);
+            });
+            $quantity = $similarBorrows->count();
+        @endphp
+        
+        @if($quantity > 1)
+        <div class="modal fade" id="ctrlModal_{{ $borrow->id }}" tabindex="-1" aria-labelledby="ctrlModalLabel_{{ $borrow->id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="ctrlModalLabel_{{ $borrow->id }}">
+                            <i class="bi bi-list-check me-2"></i>Select Control Numbers
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        @foreach($similarBorrows as $b)
+                            @php
+                                $ctrlNum = $b->copy_number ?? 'N/A';
+                            @endphp
+                            <div class="card mb-3">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-start gap-2 mb-3">
+                                        <input class="form-check-input borrow-id-checkbox modal-checkbox mt-1" type="checkbox" 
+                                               name="borrow_ids[]" value="{{ $b->id }}" id="borrow_{{ $b->id }}" checked>
+                                        <div class="grow">
+                                            <label for="borrow_{{ $b->id }}" class="form-check-label fw-semibold mb-2 d-block">
+                                                <span class="badge bg-primary">Ctrl#: {{ $ctrlNum }}</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <select class="form-select form-select-sm modal-remark-input" 
+                                            data-borrow-id="{{ $b->id }}">
+                                        <option value="No Remarks">No Remarks</option>
+                                        <option value="On Time">On Time</option>
+                                        <option value="Late Return">Late Return</option>
+                                        <option value="Lost">Lost</option>
+                                        <option value="Damage">Damage</option>
+                                    </select>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle me-1"></i>Cancel
+                        </button>
+                        <button type="button" class="btn btn-primary confirm-modal" data-modal-id="ctrlModal_{{ $borrow->id }}">
+                            <i class="bi bi-check-circle me-1"></i>Confirm
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+    @endforeach
 
     <script>
-        (function(){
-            const searchInput = document.getElementById('returnSearch');
-            const clearBtn = document.getElementById('clearReturnSearch');
-            const table = document.querySelector('.table.table-bordered');
-            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-            const returnSelectedBtn = document.getElementById('returnSelectedBtn');
-            const clearSelectionBtn = document.getElementById('clearSelectionBtn');
-            const selectedCountSpan = document.getElementById('selectedCount');
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize checkboxes and button handlers for both tabs
+            const tabs = [
+                {
+                    type: 'student',
+                    checkboxSelector: 'input.borrow-checkbox',
+                    rowSelector: 'tr.borrow-row',
+                    selectAllId: 'selectAllCheckboxStudent',
+                    clearBtnId: 'clearSelectionBtnStudent',
+                    returnBtnId: 'returnSelectedBtnStudent',
+                    countId: 'selectedCountStudent'
+                },
+                {
+                    type: 'teacher',
+                    checkboxSelector: 'input.borrow-checkbox-teacher',
+                    rowSelector: 'tr.borrow-row-teacher',
+                    selectAllId: 'selectAllCheckboxTeacher',
+                    clearBtnId: 'clearSelectionBtnTeacher',
+                    returnBtnId: 'returnSelectedBtnTeacher',
+                    countId: 'selectedCountTeacher'
+                }
+            ];
             
-            if(!searchInput || !table) return;
-
-            const tbody = table.querySelector('tbody');
-            const rows = Array.from(tbody.querySelectorAll('tr.borrow-row'));
-            
-            // Get all checkboxes
-            const allCheckboxes = Array.from(tbody.querySelectorAll('input.borrow-checkbox'));
-
-            // Update return quantity when quantity input changes
-            rows.forEach(row => {
-                const quantityInput = row.querySelector('input.returnQuantity');
-                const quantityReturnedInput = row.querySelector('input.quantity-returned-input');
-                const returnQuantitySpan = row.querySelector('span.return-quantity');
+            tabs.forEach(tabConfig => {
+                const selectAllCheckbox = document.getElementById(tabConfig.selectAllId);
+                const clearBtn = document.getElementById(tabConfig.clearBtnId);
+                const returnBtn = document.getElementById(tabConfig.returnBtnId);
+                const countSpan = document.getElementById(tabConfig.countId);
                 
-                if(quantityInput) {
-                    quantityInput.addEventListener('change', function() {
-                        const value = parseInt(this.value) || 0;
-                        if(quantityReturnedInput) {
-                            quantityReturnedInput.value = value;
-                        }
-                        if(returnQuantitySpan) {
-                            returnQuantitySpan.textContent = value;
-                        }
+                if (!selectAllCheckbox) return;
+                
+                const rows = Array.from(document.querySelectorAll(tabConfig.rowSelector));
+                const transactionCheckboxes = Array.from(document.querySelectorAll(tabConfig.rowSelector + ' ' + tabConfig.checkboxSelector));
+                
+                function updateCount() {
+                    const checked = transactionCheckboxes.filter(cb => cb.checked).length;
+                    if (countSpan) countSpan.textContent = checked;
+                    if (checked > 0) {
+                        if (clearBtn) clearBtn.style.display = 'inline-block';
+                        if (returnBtn) returnBtn.style.display = 'inline-block';
+                    } else {
+                        if (clearBtn) clearBtn.style.display = 'none';
+                        if (returnBtn) returnBtn.style.display = 'none';
+                    }
+                }
+                
+                // Select all checkbox
+                selectAllCheckbox.addEventListener('change', function() {
+                    transactionCheckboxes.forEach(cb => cb.checked = this.checked);
+                    updateCount();
+                });
+                
+                // Individual checkboxes
+                transactionCheckboxes.forEach(cb => {
+                    cb.addEventListener('change', updateCount);
+                });
+                
+                // Clear button
+                clearBtn?.addEventListener('click', function() {
+                    selectAllCheckbox.checked = false;
+                    transactionCheckboxes.forEach(cb => cb.checked = false);
+                    updateCount();
+                });
+                
+                // Return Selected button - submit all selected row forms in sequence
+                returnBtn?.addEventListener('click', function() {
+                    const checkedRows = rows.filter(row => {
+                        const checkbox = row.querySelector(tabConfig.checkboxSelector);
+                        return checkbox && checkbox.checked;
                     });
                     
-                    // Also update on input for real-time feedback
-                    quantityInput.addEventListener('input', function() {
-                        const value = parseInt(this.value) || 0;
-                        if(returnQuantitySpan) {
-                            returnQuantitySpan.textContent = value;
-                        }
-                    });
-                }
-            });
-
-            function normalize(s){ return (s||'').toString().trim().toLowerCase(); }
-
-            function filterRows(){
-                const q = normalize(searchInput.value);
-                if(q === ''){
-                    rows.forEach(r => r.style.display = '');
-                    return;
-                }
-
-                rows.forEach(row => {
-                    const cells = row.querySelectorAll('td');
-                    const borrower = normalize(cells[1]?.textContent || '');
-                    const book = normalize(cells[2]?.textContent || '');
-                    const notes = normalize(cells[6]?.textContent || '');
-                    const combined = borrower + ' ' + book + ' ' + notes;
-                    row.style.display = combined.indexOf(q) !== -1 ? '' : 'none';
-                });
-            }
-
-            // Update selected count and button visibility
-            function updateSelectedCount(){
-                const checkedCount = allCheckboxes.filter(cb => cb.checked).length;
-                selectedCountSpan.textContent = checkedCount;
-                
-                if(checkedCount > 0){
-                    returnSelectedBtn.style.display = 'inline-block';
-                    clearSelectionBtn.style.display = 'inline-block';
-                } else {
-                    returnSelectedBtn.style.display = 'none';
-                    clearSelectionBtn.style.display = 'none';
-                }
-            }
-
-            // Select all checkbox
-            selectAllCheckbox.addEventListener('change', function(){
-                const isChecked = this.checked;
-                allCheckboxes.forEach(cb => {
-                    cb.checked = isChecked;
-                });
-                updateSelectedCount();
-            });
-
-            // Individual checkboxes
-            allCheckboxes.forEach(cb => {
-                cb.addEventListener('change', function(){
-                    updateSelectedCount();
-                });
-            });
-
-            // Clear selection
-            clearSelectionBtn.addEventListener('click', function(){
-                selectAllCheckbox.checked = false;
-                allCheckboxes.forEach(cb => cb.checked = false);
-                updateSelectedCount();
-            });
-
-            // Return selected books using AJAX to process multiple returns
-            returnSelectedBtn.addEventListener('click', function(){
-                const selectedIds = allCheckboxes.filter(cb => cb.checked).map(cb => cb.dataset.borrowId);
-                
-                if(selectedIds.length === 0){
-                    alert('Please select at least one book to return.');
-                    return;
-                }
-
-                if(!confirm(`Return ${selectedIds.length} selected book(s)? Each will use the remarks and notes from their respective row.`)){
-                    return;
-                }
-
-                // Disable button during processing
-                returnSelectedBtn.disabled = true;
-                returnSelectedBtn.textContent = 'Processing...';
-
-                // Submit all forms via AJAX sequentially so they all process
-                let index = 0;
-                let successCount = 0;
-                let errorCount = 0;
-
-                function submitNext(){
-                    if(index >= selectedIds.length){
-                        // All done, reload page to show results
-                        alert(`Successfully returned ${successCount} book(s).${errorCount > 0 ? ` Failed: ${errorCount}` : ''}`);
-                        window.location.reload();
+                    if (checkedRows.length === 0) {
+                        alert('Please select at least one item to return');
                         return;
                     }
                     
-                    const id = selectedIds[index];
-                    const row = table.querySelector(`input.borrow-checkbox[data-borrow-id="${id}"]`).closest('tr');
-                    const form = row.querySelector('form.return-form');
-                    
-                    if(form){
-                        const formData = new FormData(form);
-                        const action = form.getAttribute('action');
-                        
-                        fetch(action, {
-                            method: 'POST',
-                            body: formData,
-                            headers: {
-                                'Accept': 'application/json'
-                            }
-                        })
-                        .then(response => {
-                            if(response.ok) {
-                                successCount++;
-                            } else {
-                                errorCount++;
-                            }
-                        })
-                        .catch(err => {
-                            console.error('Error submitting form:', err);
-                            errorCount++;
-                        })
-                        .finally(() => {
-                            index++;
-                            // Wait a moment before next submission
-                            setTimeout(submitNext, 500);
-                        });
-                    } else {
-                        index++;
-                        submitNext();
+                    if (!confirm('Are you sure you want to return the selected items?')) {
+                        return;
                     }
-                }
-                
-                submitNext();
+                    
+                    // Get all the forms from checked rows
+                    const forms = checkedRows.map(row => row.querySelector('.return-form')).filter(form => form);
+                    
+                    if (forms.length === 0) {
+                        alert('No forms found for selected items');
+                        return;
+                    }
+                    
+                    // Submit the first form, then chain the rest
+                    let currentFormIndex = 0;
+                    
+                    const submitNext = () => {
+                        if (currentFormIndex < forms.length) {
+                            const form = forms[currentFormIndex];
+                            currentFormIndex++;
+                            
+                            // Update remarks before submitting
+                            const remarkSelect = form.closest('tr').querySelector('.remark-select');
+                            if (remarkSelect) {
+                                const remarkInput = form.querySelector('.remark-hidden-input');
+                                if (remarkInput) {
+                                    remarkInput.value = remarkSelect.value;
+                                }
+                            }
+                            
+                            // Submit via fetch to avoid page reload until last form
+                            const formData = new FormData(form);
+                            fetch(form.action, {
+                                method: 'POST',
+                                body: formData
+                            })
+                            .then(response => {
+                                if (response.ok) {
+                                    submitNext();
+                                } else {
+                                    alert('Error submitting return. Please try again.');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                alert('Error submitting return. Please try again.');
+                            });
+                        } else {
+                            // All forms submitted, reload page
+                            window.location.reload();
+                        }
+                    };
+                    
+                    submitNext();
+                });
             });
-
-            searchInput.addEventListener('input', filterRows);
-            clearBtn.addEventListener('click', () => { searchInput.value = ''; filterRows(); searchInput.focus(); });
-        })();
+            
+            // Handle modal confirm buttons
+            document.querySelectorAll('.confirm-modal').forEach(confirmBtn => {
+                confirmBtn.addEventListener('click', function() {
+                    const modalId = this.dataset.modalId;
+                    const modal = document.getElementById(modalId);
+                    
+                    if (!modal) return;
+                    
+                    // Get all checkboxes in this modal
+                    const allModalCheckboxes = Array.from(modal.querySelectorAll('.modal-checkbox'));
+                    const checkedCheckboxes = allModalCheckboxes.filter(cb => cb.checked);
+                    
+                    if (checkedCheckboxes.length === 0) {
+                        alert('Please select at least one item');
+                        return;
+                    }
+                    
+                    // Find the table row that triggered this modal
+                    // Look for any form that references this modal in the page
+                    const rows = document.querySelectorAll('tr.borrow-row, tr.borrow-row-teacher');
+                    let targetForm = null;
+                    
+                    rows.forEach(row => {
+                        const button = row.querySelector('[data-bs-target="#' + modalId + '"]');
+                        if (button) {
+                            targetForm = row.querySelector('.return-form') || row.querySelector('form');
+                        }
+                    });
+                    
+                    if (targetForm) {
+                        // Update the form's hidden checkboxes with only the checked ones
+                        const hiddenCheckboxes = targetForm.querySelectorAll('.borrow-id-checkbox');
+                        hiddenCheckboxes.forEach(hc => {
+                            hc.checked = checkedCheckboxes.some(cb => cb.value === hc.value);
+                        });
+                        
+                        // Update remarks for each checked item
+                        checkedCheckboxes.forEach(checkbox => {
+                            const borrowId = checkbox.value;
+                            const remarkSelect = modal.querySelector(`.modal-remark-input[data-borrow-id="${borrowId}"]`);
+                            if (remarkSelect) {
+                                // Store the remark value in a data attribute for later use
+                                checkbox.dataset.remark = remarkSelect.value;
+                            }
+                        });
+                        
+                        // Capture remarks and auto-submit the form
+                        const remarkSelects = modal.querySelectorAll('.modal-remark-input');
+                        let firstRemark = 'No Remarks';
+                        if (remarkSelects.length > 0) {
+                            firstRemark = remarkSelects[0].value;
+                        }
+                        
+                        const remarkInput = targetForm.querySelector('.remark-hidden-input');
+                        if (remarkInput) {
+                            remarkInput.value = firstRemark;
+                        }
+                        
+                        // Close the modal
+                        const bsModal = bootstrap.Modal.getInstance(modal);
+                        if (bsModal) {
+                            bsModal.hide();
+                        }
+                        
+                        // Auto-submit the form after a short delay to allow modal to close
+                        setTimeout(() => {
+                            targetForm.submit();
+                        }, 300);
+                    }
+                });
+            });
+        });
     </script>
 </div>
 @endsection
-

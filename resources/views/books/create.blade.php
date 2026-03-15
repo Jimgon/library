@@ -26,6 +26,7 @@
                                 id="title" 
                                 class="form-control @error('title') is-invalid @enderror" 
                                 value="{{ old('title') }}"
+                                style="text-transform: capitalize;"
                                 required
                             >
                             @error('title')
@@ -41,6 +42,7 @@
                                 id="author" 
                                 class="form-control @error('author') is-invalid @enderror" 
                                 value="{{ old('author') }}"
+                                style="text-transform: capitalize;"
                                 required
                             >
                             @error('author')
@@ -58,6 +60,7 @@
                                 id="publisher" 
                                 class="form-control @error('publisher') is-invalid @enderror" 
                                 value="{{ old('publisher') }}"
+                                style="text-transform: capitalize;"
                             >
                             @error('publisher')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -73,7 +76,8 @@
                                 class="form-control @error('isbn') is-invalid @enderror" 
                                 value="{{ old('isbn') }}"
                                 placeholder="10 or 13 digit ISBN"
-                                pattern="[0-9]{10,20}"
+                                pattern="[0-9]{10,14}"
+                                maxlength="14"
                                 inputmode="numeric"
                                 required
                             >
@@ -98,12 +102,24 @@
                                     @php $catValue = trim($catValue); @endphp
                                     <option value="{{ $catValue }}" {{ old('category') === $catValue ? 'selected' : '' }}>{{ $catValue }}</option>
                                 @endforeach
-                                <option value="other" {{ old('category') === 'other' ? 'selected' : '' }}>Other</option>
+                                <option value="other" {{ old('category') === 'other' || (old('category') && !in_array(old('category'), $allCategories)) ? 'selected' : '' }}>Other</option>
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    const categorySelect = document.getElementById('category');
+                                    const otherInput = document.getElementById('other_category');
+                                    // Show the other input if needed on page load
+                                    if (categorySelect.value === 'other') {
+                                        otherInput.style.display = 'block';
+                                        otherInput.required = true;
+                                        otherInput.disabled = false;
+                                    }
+                                });
+                            </script>
                             </select>
                             @error('category')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <input type="text" name="other_category" id="other_category" class="form-control mt-2 @error('other_category') is-invalid @enderror" placeholder="Enter new category" value="{{ old('other_category') }}" style="display: none;">
+                            <input type="text" name="other_category" id="other_category" class="form-control mt-2 @error('other_category') is-invalid @enderror" placeholder="Enter new category" value="{{ old('other_category') }}" style="display: none; text-transform: capitalize;">
                             @error('other_category')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -126,7 +142,7 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-                        <div class="col-md-4 mb-3">
+                        {{-- <div class="col-md-4 mb-3">
                             <label for="cost_price" class="form-label">Cost Price</label>
                             <input 
                                 type="number" 
@@ -140,7 +156,7 @@
                             @error('cost_price')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                        </div>
+                        </div> --}}
                     </div>
 
                     {{-- Physical Characteristics Section --}}
@@ -174,6 +190,7 @@
                                 class="form-control @error('edition') is-invalid @enderror" 
                                 value="{{ old('edition') }}"
                                 placeholder="e.g., 3rd Edition"
+                                style="text-transform: capitalize;"
                             >
                             @error('edition')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -231,6 +248,7 @@
                                 class="form-control @error('source_of_funds') is-invalid @enderror" 
                                 value="{{ old('source_of_funds') }}"
                                 placeholder="e.g., School Budget, PTA Fund"
+                                style="text-transform: capitalize;"
                             >
                             @error('source_of_funds')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -270,7 +288,7 @@
                                 id="call_number" 
                                 class="form-control" 
                                 placeholder="Auto-generated"
-                                value="{{ $nextCtrlBase ?? '' }}"
+                                value="{{ $nextCtrlBase ?? '001' }}"
                                 readonly
                             >
                         </div>
@@ -320,7 +338,7 @@
 
                     {{-- Form Actions --}}
                     <div class="d-flex gap-2 justify-content-end mt-5">
-                        <a href="{{ route('books.index') }}" class="btn btn-outline-secondary">
+                        <a href="{{ route('books.catalog') }}" class="btn btn-outline-secondary">
                             <i class="bi bi-x-circle me-1"></i>Cancel
                         </a>
                         <button type="submit" class="btn btn-primary">
@@ -361,34 +379,48 @@
             if (categorySelect.value === 'other') {
                 otherInput.style.display = 'block';
                 otherInput.required = true;
+                otherInput.disabled = false;
             } else {
                 otherInput.style.display = 'none';
                 otherInput.required = false;
+                otherInput.disabled = true;
                 // clear the input when hiding
                 otherInput.value = '';
             }
         }
 
         // keep an option in select when user types a new category
+        function toAllCaps(str) {
+            if (!str) return '';
+            return str.toUpperCase();
+        }
+
         function syncOtherCategory() {
-            const val = otherInput.value.trim();
+            let val = otherInput.value.trim();
             if (!val) {
                 categorySelect.value = 'other';
                 return;
             }
-            
-            let existing = Array.from(categorySelect.options).find(o => o.value === val);
+            // Normalize to all caps
+            val = toAllCaps(val);
+            otherInput.value = val;
+            // Check for existing option (case-insensitive)
+            let existing = Array.from(categorySelect.options).find(o => o.value.toUpperCase() === val);
             if (!existing) {
                 const opt = document.createElement('option');
                 opt.value = val;
-                opt.textContent = val;  // Use textContent for better compatibility
-                opt.text = val;  // Also set text property
+                opt.textContent = val;
+                opt.text = val;
                 // Add before "Other" option
                 const otherOption = categorySelect.querySelector('option[value="other"]');
                 categorySelect.insertBefore(opt, otherOption);
+                categorySelect.value = val;
+            } else {
+                // If exists, always select the existing one (preserve original casing)
+                categorySelect.value = existing.value;
+                otherInput.value = existing.value;
+                return;
             }
-            // Auto-select the custom category as the user types
-            categorySelect.value = val;
         }
 
         function generateBase() {
@@ -399,27 +431,35 @@
             return base;
         }
 
+        // Track the highest suffix ever used for the current base
+        let maxCopySuffix = 0;
         function getNextControlNumber() {
-            const rows = copiesContainer.querySelectorAll('tr');
-            if (rows.length === 0) {
-                const base = generateBase();
-                return base + '-001';
-            }
-            // Get last control number and increment it
-            const lastRow = rows[rows.length - 1];
-            const lastCtrlInput = lastRow.querySelector('input.ctrl-number');
-            if (lastCtrlInput) {
-                const lastCtrl = lastCtrlInput.value;
-                const parts = lastCtrl.split('-');
-                if (parts.length === 2) {
-                    const base = parts[0];
-                    const suffix = parseInt(parts[1]) + 1;
-                    return base + '-' + String(suffix).padStart(3, '0');
-                }
-            }
             const base = generateBase();
-            return base + '-' + String(rows.length + 1).padStart(3, '0');
+            // Find all current and previously used suffixes
+            let suffixes = [];
+            const rows = copiesContainer.querySelectorAll('tr');
+            rows.forEach(row => {
+                const input = row.querySelector('input.ctrl-number');
+                if (input) {
+                    const val = input.value;
+                    const parts = val.split('-');
+                    if (parts.length === 2 && parts[0] === base) {
+                        const num = parseInt(parts[1]);
+                        if (!isNaN(num)) suffixes.push(num);
+                    }
+                }
+            });
+            // Also consider maxCopySuffix (in case of deleted rows)
+            let maxSuffix = Math.max(maxCopySuffix, ...suffixes, 0);
+            maxCopySuffix = maxSuffix + 1;
+            return base + '-' + String(maxCopySuffix).padStart(3, '0');
         }
+
+        // Reset maxCopySuffix if base changes
+        callNumberInput.addEventListener('input', function() {
+            maxCopySuffix = 0;
+            updateControlNumbers();
+        });
 
         function updateControlNumbers() {
             const base = generateBase();
@@ -432,35 +472,73 @@
             });
         }
 
-        function addCopyRow(ctrlValue = '') {
+        function addCopyRow(ctrlValue = '', yearValue = '') {
+            // If no ctrlValue provided, generate next
+            if (!ctrlValue) {
+                ctrlValue = getNextControlNumber();
+            } else {
+                // Update maxCopySuffix if needed
+                const parts = ctrlValue.split('-');
+                if (parts.length === 2) {
+                    const num = parseInt(parts[1]);
+                    if (!isNaN(num) && num > maxCopySuffix) maxCopySuffix = num;
+                }
+            }
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td><input type="text" name="control_numbers[]" class="form-control form-control-sm ctrl-number" value="${ctrlValue}" readonly></td>
-                <td><input type="number" name="copy_year[]" class="form-control form-control-sm" min="1900" max="2100"></td>
+                <td><input type="number" name="copy_year[]" class="form-control form-control-sm copy-year-input" min="1900" max="2100" value="${yearValue}" placeholder="Enter year"></td>
                 <td><input type="text" name="copy_status[]" class="form-control form-control-sm" value="available" readonly></td>
                 <td class="text-center"><button type="button" class="btn btn-sm btn-danger removeCopyBtn">&times;</button></td>
             `;
             copiesContainer.appendChild(row);
             copiesInput.value = copiesContainer.querySelectorAll('tr').length;
 
+            // Add event listener to auto-fill other rows
+            const yearInput = row.querySelector('.copy-year-input');
+            yearInput.addEventListener('input', function() {
+                const yearValue = this.value;
+                // Fill all copy_year inputs with the same value
+                const allYearInputs = copiesContainer.querySelectorAll('.copy-year-input');
+                allYearInputs.forEach(input => {
+                    input.value = yearValue;
+                });
+            });
+
             row.querySelector('.removeCopyBtn').addEventListener('click', function() {
                 row.remove();
                 copiesInput.value = copiesContainer.querySelectorAll('tr').length;
+                // Do not decrement maxCopySuffix so deleted numbers are not reused
             });
         }
 
         addCopyBtn.addEventListener('click', function() {
             const nextCtrl = getNextControlNumber();
-            addCopyRow(nextCtrl);
+            const currentYear = new Date().getFullYear().toString();
+            addCopyRow(nextCtrl, currentYear);
         });
 
         // Handle form submission - ensure custom category is properly selected
         form.addEventListener('submit', function(e) {
             const selectedValue = categorySelect.value;
             const customValue = otherInput.value.trim();
-            
-            // If user entered a custom category, make sure it's properly selected
-            if (customValue && selectedValue !== customValue) {
+
+            // Ensure all copy year inputs have values (fill empty with current year)
+            const yearInputs = copiesContainer.querySelectorAll('input[name="copy_year[]"]');
+            const currentYear = new Date().getFullYear().toString();
+            yearInputs.forEach(input => {
+                if (!input.value || input.value.trim() === '') {
+                    input.value = currentYear;
+                }
+            });
+
+            // If "other" is selected, custom value is required
+            if (selectedValue === 'other') {
+                if (!customValue) {
+                    e.preventDefault();
+                    otherInput.classList.add('is-invalid');
+                    return false;
+                }
                 // Find or create the option
                 let option = Array.from(categorySelect.options).find(o => o.value === customValue);
                 if (!option) {
@@ -473,6 +551,17 @@
                 }
                 // Select it
                 categorySelect.value = customValue;
+                // Disable and clear the other_category input so only 'category' is submitted
+                otherInput.disabled = true;
+                otherInput.value = '';
+                // Ensure the select's value is the custom value for submission
+                setTimeout(function() {
+                    categorySelect.value = customValue;
+                }, 0);
+            } else {
+                // If "other" is NOT selected, clear the custom value
+                otherInput.value = '';
+                otherInput.disabled = true;
             }
         });
 
@@ -485,10 +574,11 @@
         copiesInput.addEventListener('change', function() {
             const desired = parseInt(copiesInput.value) || 0;
             const current = copiesContainer.querySelectorAll('tr').length;
+            const currentYear = new Date().getFullYear().toString();
             if (desired > current) {
                 for (let i = current; i < desired; i++) {
                     const nextCtrl = getNextControlNumber();
-                    addCopyRow(nextCtrl);
+                    addCopyRow(nextCtrl, currentYear);
                 }
             } else if (desired < current) {
                 for (let i = current; i > desired; i--) {
@@ -499,9 +589,10 @@
 
         // initialize rows on page load with auto-incremented control numbers
         const initialCopies = parseInt(copiesInput.value) || 1;
+        const currentYear = new Date().getFullYear().toString();
         for (let i = 0; i < initialCopies; i++) {
             const nextCtrl = getNextControlNumber();
-            addCopyRow(nextCtrl);
+            addCopyRow(nextCtrl, currentYear);
         }
 
         // run initial toggle

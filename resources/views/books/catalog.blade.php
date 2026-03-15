@@ -5,7 +5,7 @@
     {{-- Header Section --}}
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
-            <h4 class="mb-1">Book Catalog</h4>
+            <h4 class="mb-1">Book Inventory</h4>
 
         </div>
         <div class="d-flex gap-2 flex-wrap align-items-center">
@@ -14,12 +14,12 @@
             </a>
 
             <button type="button" class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#importBooksModal">
-                <i class="bi bi-upload me-1"></i>Import CSV
+                <i class="bi bi-download me-1"></i>Import CSV
             </button>
         
-            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addBookModal">
+            <a href="{{ route('books.create') }}" class="btn btn-success">
                 <i class="bi bi-plus-circle me-1"></i>Add Book
-            </button>
+            </a>
         </div>
     </div>
 
@@ -77,281 +77,7 @@
         </div>
     </div>
 
-    {{-- Add Book Modal --}}
-    <div class="modal fade" id="addBookModal" tabindex="-1" aria-labelledby="addBookModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <form id="addBookForm" action="{{ route('books.store') }}" method="POST">
-                @csrf
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="addBookModalLabel">
-                            <i class="bi bi-plus-circle me-2"></i>Add New Book
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        {{-- Basic Information Section --}}
-                        <div class="section-title mb-4">
-                            <h6 class="text-uppercase fw-bold text-secondary">Basic Information</h6>
-                            <hr>
-                        </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="addBookTitle" class="form-label">Title <span class="text-danger">*</span></label>
-                                <input 
-                                    type="text" 
-                                    name="title" 
-                                    id="addBookTitle" 
-                                    class="form-control" 
-                                    required
-                                >
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label for="addBookAuthor" class="form-label">Author <span class="text-danger">*</span></label>
-                                <input 
-                                    type="text" 
-                                    name="author" 
-                                    id="addBookAuthor" 
-                                    class="form-control" 
-                                    required
-                                >
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="addBookPublisher" class="form-label">Publisher</label>
-                                <input 
-                                    type="text" 
-                                    name="publisher" 
-                                    id="addBookPublisher" 
-                                    class="form-control"
-                                >
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label for="addBookIsbn" class="form-label">ISBN <span class="text-danger">*</span></label>
-                                <input 
-                                    type="text" 
-                                    name="isbn" 
-                                    id="addBookIsbn" 
-                                    class="form-control" 
-                                    placeholder="10 or 13 digit ISBN"
-                                    pattern="[0-9]{10,20}"
-                                    inputmode="numeric"
-                                    required
-                                >
-                            </div>
-                        </div>
-
-                        {{-- Classification & Cataloging Section --}}
-                        <div class="section-title mb-4 mt-4">
-                            <h6 class="text-uppercase fw-bold text-secondary">Classification & Cataloging</h6>
-                            <hr>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="addBookCategory" class="form-label">Category <span class="text-danger">*</span></label>
-                                <select name="category" id="addBookCategory" class="form-select" required>
-                                    <option value="">-- Select Category --</option>
-                                    @foreach($allCategories as $catValue)
-                                        @php $catValue = trim($catValue); @endphp
-                                        <option value="{{ $catValue }}">{{ $catValue }}</option>
-                                    @endforeach
-                                    <option value="other">Other</option>
-                                </select>
-                                <input type="text" name="other_category" id="addBookOtherCategory" class="form-control mt-2" placeholder="Enter new category" style="display: none;">
-                            </div>
-
-                            <div class="col-md-4 mb-3">
-                                <label for="addBookPublishedYear" class="form-label">Published Year</label>
-                                <input 
-                                    type="number" 
-                                    name="published_year" 
-                                    id="addBookPublishedYear" 
-                                    class="form-control" 
-                                    min="1900"
-                                    max="{{ date('Y') + 1 }}"
-                                >
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="addBookCostPrice" class="form-label">Cost Price</label>
-                                <input 
-                                    type="number" 
-                                    name="cost_price" 
-                                    id="addBookCostPrice" 
-                                    class="form-control" 
-                                    min="0"
-                                    step="0.01"
-                                >
-                            </div>
-                        </div>
-
-                        {{-- Physical Characteristics Section --}}
-                        <div class="section-title mb-4 mt-4">
-                            <h6 class="text-uppercase fw-bold text-secondary">Physical Characteristics</h6>
-                            <hr>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="addBookPages" class="form-label">Pages</label>
-                                <input 
-                                    type="number" 
-                                    name="pages" 
-                                    id="addBookPages" 
-                                    class="form-control" 
-                                    min="1"
-                                >
-                            </div>
-
-                            <div class="col-md-4 mb-3">
-                                <label for="addBookEdition" class="form-label">Edition</label>
-                                <input 
-                                    type="text" 
-                                    name="edition" 
-                                    id="addBookEdition" 
-                                    class="form-control" 
-                                    placeholder="e.g., 3rd Edition"
-                                >
-                            </div>
-
-                            <div class="col-md-4 mb-3">
-                                <label for="addBookCondition" class="form-label">Condition</label>
-                                <select
-                                    name="condition"
-                                    id="addBookCondition"
-                                    class="form-select"
-                                >
-                                    <option value="">-- Select Condition --</option>
-                                    <option value="Brand New">Brand New</option>
-                                    <option value="Old">Old</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        {{-- Acquisition Information Section --}}
-                        <div class="section-title mb-4 mt-4">
-                            <h6 class="text-uppercase fw-bold text-secondary">Acquisition Information</h6>
-                            <hr>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="addBookAcquisitionType" class="form-label">Acquisition Type</label>
-                                <select 
-                                    name="acquisition_type" 
-                                    id="addBookAcquisitionType" 
-                                    class="form-select"
-                                >
-                                    <option value="">-- Select Type --</option>
-                                    <option value="purchase">Purchase</option>
-                                    <option value="donation">Donation</option>
-                                    <option value="exchange">Exchange</option>
-                                    <option value="grant">Grant</option>
-                                </select>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label for="addBookSourceOfFunds" class="form-label">Source of Funds</label>
-                                <input 
-                                    type="text" 
-                                    name="source_of_funds" 
-                                    id="addBookSourceOfFunds" 
-                                    class="form-control" 
-                                    placeholder="e.g., School Budget, PTA Fund"
-                                >
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="addBookPurchasePrice" class="form-label">Purchase Price</label>
-                                <input 
-                                    type="number" 
-                                    name="purchase_price" 
-                                    id="addBookPurchasePrice" 
-                                    class="form-control" 
-                                    min="0"
-                                    step="0.01"
-                                >
-                            </div>
-                        </div>
-
-                        {{-- Copies Information Section --}}
-                        <div class="section-title mb-4 mt-4">
-                            <h6 class="text-uppercase fw-bold text-secondary">Copies Information</h6>
-                            <hr>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="addBookCallNumber" class="form-label">Control Number Base</label>
-                                <input 
-                                    type="text" 
-                                    name="call_number" 
-                                    id="addBookCallNumber" 
-                                    class="form-control" 
-                                    placeholder="Auto-generated"
-                                    value="{{ $nextCtrlBase ?? '' }}"
-                                    readonly
-                                >
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="addBookCopies" class="form-label">Total Number of Copies <span class="text-danger">*</span></label>
-                                <input 
-                                    type="number" 
-                                    name="copies" 
-                                    id="addBookCopies" 
-                                    class="form-control" 
-                                    value="1"
-                                    min="1"
-                                    required
-                                >
-                            </div>
-                        </div>
-
-                        <div class="card bg-light mb-4 mt-3">
-                            <div class="card-header">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0">Physical Copies Details</h6>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" id="addBookAddCopyBtn">
-                                        <i class="bi bi-plus me-1"></i>Add Copy
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-hover mb-0" id="addBookCopiesTable">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Ctrl #</th>
-                                                <th style="width: 30%;">Acquisition Year</th>
-                                                <th style="width: 30%;">Status</th>
-                                                <th style="width: 20%;" class="text-center">Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="addBookCopiesContainer">
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <i class="bi bi-x-circle me-1"></i>Cancel
-                        </button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-circle me-1"></i>Save Book
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
 
     {{-- Search Form --}}
     <form id="searchForm" method="GET" action="{{ route('books.index') }}" class="mb-4">
@@ -498,6 +224,8 @@
                                         data-book-copies="{{ $book->copies ?? 0 }}" data-book-available-copies="{{ $book->available_copies ?? 0 }}"
                                         data-book-control-numbers='@json($book->control_numbers ?? [])'
                                         data-book-copy-status='@json($book->copy_status ?? [])'
+                                        data-book-copy-years='@json($book->copy_years ?? [])'
+                                        data-book-created-year="{{ $book->created_at->format('Y') }}"
                                         data-bs-toggle="modal" data-bs-target="#viewBookModal">
                                         <i class="bi bi-eye"></i>
                                     </button>
@@ -654,11 +382,18 @@
                     <div class="row" id="copiesContainer">
                     </div>
                 </div>
+                
             </div>
             <div class="modal-footer border-0">
                 <a href="#" id="editBookBtn" class="btn btn-primary">
                     <i class="bi bi-pencil me-1"></i>Edit
                 </a>
+
+                    <button type="button" id="printBookBtn" class="btn btn-outline-secondary">
+                        <i class="bi bi-printer me-1"></i>Print
+                    </button>
+        
+
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="bi bi-arrow-left me-1"></i>Close
                 </button>
@@ -684,6 +419,19 @@
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
+                        <label for="acquisitionYear" class="form-label">Acquisition Year</label>
+                        <input 
+                            type="number" 
+                            class="form-control" 
+                            id="acquisitionYear" 
+                            name="acquisition_year" 
+                            min="1900" 
+                            max="{{ date('Y') }}"
+                            placeholder="Enter acquisition year"
+                        >
+                        <small class="text-muted">Optional: Year when copies were acquired</small>
+                    </div>
+                    <div class="mb-3">
                         <label for="copiesCount" class="form-label">Number of Copies to Add</label>
                         <input 
                             type="number" 
@@ -696,6 +444,25 @@
                             required
                         >
                         <small class="text-muted">Must be a positive number between 1 and 1000</small>
+                    </div>
+                    <div class="card bg-light mb-3" id="copiesYearsCard" style="display: none;">
+                        <div class="card-header">
+                            <h6 class="mb-0">Acquisition Year for Each Copy</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover mb-0" id="copiesYearsTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Copy #</th>
+                                            <th>Acquisition Year</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="copiesYearsContainer">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0">
@@ -729,6 +496,18 @@
         flex: 0 0 auto;
         margin: 0;
         padding: 0.375rem 0.75rem;
+    }
+
+    /* Center modal properly */
+    #addBookModal .modal-dialog {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+    }
+
+    #addBookModal .modal-content {
+        max-height: 90vh;
     }
 </style>
 
@@ -839,316 +618,505 @@ document.addEventListener('DOMContentLoaded', function() {
 
     deleteSelectedBtnBottom.addEventListener('click', performDelete);
 
+    // Delete Copy Function
+    function deleteCopy(bookId, copyIndex) {
+        if (!confirm('Are you sure you want to delete this copy?')) {
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('copy_index', copyIndex);
+
+        fetch(`/books/${bookId}/delete-copy`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(async response => {
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (e) {}
+            if (response.ok && data.success) {
+                setTimeout(() => {
+                    location.reload();
+                }, 300);
+            } else {
+                alert((data && data.error) ? data.error : 'Error deleting copy. Please try again.');
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            alert('Error deleting copy. Please check the console.');
+        });
+    }
+
     // Book Details Modal Handler
     const viewBookModal = document.getElementById('viewBookModal');
     if (viewBookModal) {
         viewBookModal.addEventListener('show.bs.modal', function(event) {
             const button = event.relatedTarget;
             const bookId = button.getAttribute('data-book-id');
-            const title = button.getAttribute('data-book-title');
-            const author = button.getAttribute('data-book-author');
-            const publisher = button.getAttribute('data-book-publisher');
-            const isbn = button.getAttribute('data-book-isbn');
-            const category = button.getAttribute('data-book-category');
-            const publishedYear = button.getAttribute('data-book-published-year');
-            const pages = button.getAttribute('data-book-pages');
-            const edition = button.getAttribute('data-book-edition');
-            const condition = button.getAttribute('data-book-condition');
-            const acquisitionType = button.getAttribute('data-book-acquisition-type');
-            const sourceOfFunds = button.getAttribute('data-book-source-of-funds');
-            const purchasePrice = button.getAttribute('data-book-purchase-price');
-            const costPrice = button.getAttribute('data-book-cost-price');
-            const copies = button.getAttribute('data-book-copies');
-            const availableCopies = button.getAttribute('data-book-available-copies');
-            const controlNumbers = JSON.parse(button.getAttribute('data-book-control-numbers') || '[]');
-            const copyStatus = JSON.parse(button.getAttribute('data-book-copy-status') || '[]');
-
-            // Populate basic info
-            document.getElementById('modalTitle').textContent = title || '-';
-            document.getElementById('modalAuthor').textContent = author || '-';
-            document.getElementById('modalISBN').textContent = isbn || '-';
-            document.getElementById('modalCategory').textContent = category || '-';
-            document.getElementById('modalPublisher').textContent = publisher || '-';
-            document.getElementById('modalPublishedYear').textContent = publishedYear || '-';
-            document.getElementById('modalPages').textContent = pages || '-';
-            document.getElementById('modalEdition').textContent = edition || '-';
-            document.getElementById('modalCondition').textContent = condition || '-';
-            document.getElementById('modalAcquisitionType').textContent = acquisitionType || '-';
-            document.getElementById('modalSourceOfFunds').textContent = sourceOfFunds || '-';
-            document.getElementById('modalCostPrice').textContent = costPrice || '-';
-            document.getElementById('modalPurchasePrice').textContent = purchasePrice || '-';
-            document.getElementById('modalCopies').textContent = `${availableCopies || '0'} / ${copies || '0'}`;
-
-            // Populate physical copies
-            const copiesContainer = document.getElementById('copiesContainer');
-            const copiesSection = document.getElementById('copiesSection');
-            copiesContainer.innerHTML = '';
-
-            if (controlNumbers.length > 0) {
-                document.getElementById('copiesCount').textContent = controlNumbers.length;
-                controlNumbers.forEach((cn, idx) => {
-                    const status = copyStatus[idx] || 'Available';
-                    const badgeClass = status.toLowerCase() === 'available' ? 'bg-success' : 'bg-secondary';
-                    const copyCard = `
-                        <div class="col-md-4 mb-3">
-                            <div class="border rounded p-3">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <strong>Copy #${idx + 1}</strong>
-                                    <span class="badge ${badgeClass}">${status}</span>
-                                </div>
-                                <p class="text-muted small mb-0">Ctrl: <strong>${cn}</strong></p>
-                            </div>
-                        </div>
-                    `;
-                    copiesContainer.innerHTML += copyCard;
-                });
-                copiesSection.style.display = 'block';
-            } else {
-                copiesSection.style.display = 'none';
-            }
-
-            // Update edit button link
-            document.getElementById('editBookBtn').href = `/books/${bookId}/edit`;
-        });
-    }
-
-    // Add Copies Modal Handler
-    const addCopiesModal = document.getElementById('addCopiesModal');
-    if (addCopiesModal) {
-        addCopiesModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const bookId = button.getAttribute('data-book-id');
-            const bookTitle = button.getAttribute('data-book-title');
-
-            // Set form action
-            const form = document.getElementById('addCopiesForm');
-            form.action = `/books/${bookId}/add-copies`;
-
-            // Update modal title
-            document.getElementById('addCopiesBookTitle').textContent = `Add copies to "${bookTitle}"`;
-
-            // Reset form
-            document.getElementById('copiesCount').value = '';
-        });
-
-        // Handle form submission
-        document.getElementById('addCopiesForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            const action = this.getAttribute('action');
-
-            fetch(action, {
-                method: 'POST',
-                body: formData,
+            
+            // Show loading state
+            const modalBody = viewBookModal.querySelector('.modal-body');
+            const originalContent = modalBody.innerHTML;
+            
+            // Fetch fresh data from server to get updated acquisition years
+            fetch(`/books/${bookId}`, {
                 headers: {
+                    'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             })
             .then(response => {
-                if (response.ok || response.status === 302 || response.status === 301) {
-                    setTimeout(() => {
-                        location.reload();
-                    }, 300);
-                } else {
-                    alert('Error adding copies. Please try again.');
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Book data fetched:', data);
+                
+                // Populate basic info
+                document.getElementById('modalTitle').textContent = data.title || '-';
+                document.getElementById('modalAuthor').textContent = data.author || '-';
+                document.getElementById('modalISBN').textContent = data.isbn || '-';
+                document.getElementById('modalCategory').textContent = data.category || '-';
+                document.getElementById('modalPublisher').textContent = data.publisher || '-';
+                document.getElementById('modalPublishedYear').textContent = data.published_year || '-';
+                document.getElementById('modalPages').textContent = data.pages || '-';
+                document.getElementById('modalEdition').textContent = data.edition || '-';
+                document.getElementById('modalCondition').textContent = data.condition || '-';
+                document.getElementById('modalAcquisitionType').textContent = data.acquisition_type || '-';
+                document.getElementById('modalSourceOfFunds').textContent = data.source_of_funds || '-';
+                document.getElementById('modalCostPrice').textContent = data.cost_price ? '₱' + parseFloat(data.cost_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-';
+                document.getElementById('modalPurchasePrice').textContent = data.purchase_price ? '₱' + parseFloat(data.purchase_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-';
+                document.getElementById('modalCopies').textContent = `${data.available_copies || '0'} / ${data.copies || '0'}`;
+
+                // Populate physical copies
+                const copiesContainer = document.getElementById('copiesContainer');
+                const copiesSection = document.getElementById('copiesSection');
+                copiesContainer.innerHTML = '';
+
+                const controlNumbers = data.control_numbers || [];
+                const copyStatus = data.copy_status || [];
+                const copyYears = data.copy_years || [];
+                const copyConditions = data.copy_conditions || [];
+
+                if (controlNumbers.length > 0) {
+                    document.getElementById('copiesCount').textContent = controlNumbers.length;
+                    
+                    controlNumbers.forEach((cn, idx) => {
+                        const status = copyStatus[idx] || 'Available';
+                        const badgeClass = status.toLowerCase() === 'available' ? 'bg-success' : 'bg-secondary';
+                        const acquisitionYear = (copyYears && copyYears[idx]) ? copyYears[idx] : (data.created_at ? new Date(data.created_at).getFullYear() : new Date().getFullYear());
+                        const condition = (copyConditions && copyConditions[idx]) ? copyConditions[idx] : 'Brand New';
+                        const copyCard = `
+                            <div class="col-md-4 mb-3">
+                                <div class="border rounded p-3 position-relative">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <strong>Copy #${idx + 1}</strong>
+                                        <div>
+                                            <span class="badge ${badgeClass}">${status}</span>
+                                            <button type="button" class="btn btn-sm btn-outline-danger ms-1 deleteCopyBtn" data-book-id="${bookId}" data-copy-index="${idx}" title="Delete copy">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <p class="text-muted small mb-1">Ctrl: <strong>${cn}</strong></p>
+                                    <p class="text-muted small mb-1">Year: <strong>${acquisitionYear}</strong></p>
+                                    <p class="text-muted small mb-0">Condition: <strong>${condition}</strong></p>
+                                </div>
+                            </div>
+                        `;
+                        copiesContainer.innerHTML += copyCard;
+                    });
+                    
+                    // Attach delete event listeners
+                    copiesContainer.querySelectorAll('.deleteCopyBtn').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const bookId = this.getAttribute('data-book-id');
+                            const copyIndex = this.getAttribute('data-copy-index');
+                            deleteCopy(bookId, copyIndex);
+                        });
+                    });
+                    
+                    copiesSection.style.display = 'block';
+                } else {
+                    copiesSection.style.display = 'none';
+                }
+
+                // Update edit button link
+                document.getElementById('editBookBtn').href = `/books/${bookId}/edit`;
+
+                // Store book data in modal for print functionality
+                viewBookModal.dataset.currentBookData = JSON.stringify({
+                    title: data.title,
+                    author: data.author,
+                    isbn: data.isbn,
+                    category: data.category,
+                    publisher: data.publisher,
+                    published_year: data.published_year,
+                    pages: data.pages,
+                    edition: data.edition,
+                    condition: data.condition,
+                    acquisition_type: data.acquisition_type,
+                    source_of_funds: data.source_of_funds,
+                    cost_price: data.cost_price ? '₱' + parseFloat(data.cost_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-',
+                    purchase_price: data.purchase_price ? '₱' + parseFloat(data.purchase_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-',
+                    available_copies: data.available_copies || '0',
+                    copies: data.copies || '0',
+                    control_numbers: data.control_numbers || [],
+                    copy_status: data.copy_status || [],
+                    copy_years: data.copy_years || []
+                });
             })
             .catch(err => {
-                console.error('Error:', err);
-                alert('Error adding copies. Please check the console.');
+                console.error('Error fetching book data:', err);
+                console.error('Full error:', err);
+                // Set all fields to show error status
+                document.getElementById('modalTitle').textContent = 'Error Loading Data';
+                document.getElementById('modalAuthor').textContent = 'Please check console for details';
             });
-
-            // Close modal
-            const modal = bootstrap.Modal.getInstance(addCopiesModal);
-            if (modal) {
-                modal.hide();
-            }
         });
     }
 
-    // Add Book Modal Handler
-    const addBookModal = document.getElementById('addBookModal');
-    if (addBookModal) {
-        const nextBaseUrl = @json(route('books.api.nextControlBase'));
-        const form = document.getElementById('addBookForm');
-        const categorySelect = document.getElementById('addBookCategory');
-        const otherInput = document.getElementById('addBookOtherCategory');
-        const addCopyBtn = document.getElementById('addBookAddCopyBtn');
-        const copiesContainer = document.getElementById('addBookCopiesContainer');
-        const callNumberInput = document.getElementById('addBookCallNumber');
-        const copiesInput = document.getElementById('addBookCopies');
-        const isbnInput = document.getElementById('addBookIsbn');
-        const pagesInput = document.getElementById('addBookPages');
+        // Add Copies Modal Handler
+        const addCopiesModal = document.getElementById('addCopiesModal');
+        const copiesCountInput = document.getElementById('copiesCount');
+        const acquisitionYearInput = document.getElementById('acquisitionYear');
+        const copiesYearsCard = document.getElementById('copiesYearsCard');
+        const copiesYearsContainer = document.getElementById('copiesYearsContainer');
 
-        function toggleOther() {
-            if (categorySelect.value === 'other') {
-                otherInput.style.display = 'block';
-                otherInput.required = true;
-            } else {
-                otherInput.style.display = 'none';
-                otherInput.required = false;
-                otherInput.value = '';
-            }
-        }
+        if (addCopiesModal) {
+            addCopiesModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const bookId = button.getAttribute('data-book-id');
+                const bookTitle = button.getAttribute('data-book-title');
+            
+                // Set form action
+                const form = document.getElementById('addCopiesForm');
+                form.action = `/books/${bookId}/add-copies`;
 
-        function syncOtherCategory() {
-            const val = otherInput.value.trim();
-            if (!val) {
-                categorySelect.value = 'other';
-                return;
-            }
-            let existing = Array.from(categorySelect.options).find(o => o.value === val);
-            if (!existing) {
-                const opt = document.createElement('option');
-                opt.value = val;
-                opt.textContent = val;
-                opt.text = val;
-                const otherOption = categorySelect.querySelector('option[value="other"]');
-                categorySelect.insertBefore(opt, otherOption);
-            }
-            categorySelect.value = val;
-        }
+                // Update modal title
+                document.getElementById('addCopiesBookTitle').textContent = `Add copies to "${bookTitle}"`;
 
-        function generateBase() {
-            let base = callNumberInput.value.trim();
-            if (!base) {
-                base = '001';
-            }
-            return base;
-        }
+                // Reset form and initialize with current year
+                copiesCountInput.value = '';
+                const currentYear = new Date().getFullYear();
+                acquisitionYearInput.value = currentYear;
+                acquisitionYearInput.placeholder = currentYear;
+                copiesYearsCard.style.display = 'none';
+                copiesYearsContainer.innerHTML = '';
 
-        function getNextControlNumber() {
-            const rows = copiesContainer.querySelectorAll('tr');
-            if (rows.length === 0) {
-                const base = generateBase();
-                return base + '-001';
-            }
-            const lastRow = rows[rows.length - 1];
-            const lastCtrlInput = lastRow.querySelector('input.ctrl-number');
-            if (lastCtrlInput) {
-                const lastCtrl = lastCtrlInput.value;
-                const parts = lastCtrl.split('-');
-                if (parts.length === 2) {
-                    const base = parts[0];
-                    const suffix = parseInt(parts[1]) + 1;
-                    return base + '-' + String(suffix).padStart(3, '0');
-                }
-            }
-            const base = generateBase();
-            return base + '-' + String(rows.length + 1).padStart(3, '0');
-        }
-
-        function updateControlNumbers() {
-            const base = generateBase();
-            const rows = copiesContainer.querySelectorAll('tr');
-            rows.forEach((row, idx) => {
-                const input = row.querySelector('input.ctrl-number');
-                if (input) {
-                    input.value = base + '-' + String(idx + 1).padStart(3, '0');
-                }
+                // Add listener for acquisition year changes AFTER modal is shown
+                acquisitionYearInput.removeEventListener('input', updateYearsOnAcquisitionChange);
+                acquisitionYearInput.addEventListener('input', updateYearsOnAcquisitionChange);
             });
-        }
 
-        function addCopyRow(ctrlValue = '') {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><input type="text" name="control_numbers[]" class="form-control form-control-sm ctrl-number" value="${ctrlValue}" readonly></td>
-                <td><input type="number" name="copy_year[]" class="form-control form-control-sm" min="1900" max="2100"></td>
-                <td><input type="text" name="copy_status[]" class="form-control form-control-sm" value="available" readonly></td>
-                <td class="text-center"><button type="button" class="btn btn-sm btn-danger removeCopyBtn">&times;</button></td>
-            `;
-            copiesContainer.appendChild(row);
-            copiesInput.value = copiesContainer.querySelectorAll('tr').length;
+            // Define the update function outside so it can be reused
+            const updateYearsOnAcquisitionChange = function() {
+                const yearValue = this.value;
+                if (!yearValue || yearValue.trim() === '') {
+                    return; // Don't update if acquisition year is empty
+                }
+                const yearInputs = copiesYearsContainer.querySelectorAll('.copy-year-input');
+                yearInputs.forEach(yearInput => {
+                    yearInput.value = yearValue;
+                });
+            };
 
-            row.querySelector('.removeCopyBtn').addEventListener('click', function() {
-                row.remove();
-                copiesInput.value = copiesContainer.querySelectorAll('tr').length;
-                updateControlNumbers();
-            });
-        }
-
-        function initCopiesFromCount() {
-            const desired = parseInt(copiesInput.value) || 1;
-            copiesContainer.innerHTML = '';
-            for (let i = 0; i < desired; i++) {
-                const nextCtrl = getNextControlNumber();
-                addCopyRow(nextCtrl);
-            }
-        }
-
-        async function refreshBase() {
-            try {
-                const res = await fetch(nextBaseUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data && data.nextBase) {
-                        callNumberInput.value = data.nextBase;
-                        updateControlNumbers();
+            // Handle number of copies change
+            copiesCountInput.addEventListener('change', function() {
+                const count = parseInt(this.value) || 0;
+                copiesYearsContainer.innerHTML = '';
+                
+                if (count > 0) {
+                    copiesYearsCard.style.display = 'block';
+                    const baseYear = acquisitionYearInput.value && acquisitionYearInput.value.trim() !== '' ? acquisitionYearInput.value : new Date().getFullYear();
+                    
+                    for (let i = 0; i < count; i++) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${i + 1}</td>
+                            <td><input type="number" name="copy_years[]" class="form-control form-control-sm copy-year-input" min="1900" max="{{ date('Y') }}" value="${baseYear}" required></td>
+                        `;
+                        copiesYearsContainer.appendChild(row);
                     }
+                    
+                    // Add event listeners to auto-fill years
+                    const yearInputs = copiesYearsContainer.querySelectorAll('.copy-year-input');
+                    yearInputs.forEach(input => {
+                        input.addEventListener('input', function() {
+                            const yearValue = this.value;
+                            yearInputs.forEach(yearInput => {
+                                yearInput.value = yearValue;
+                            });
+                        });
+                    });
+                } else {
+                    copiesYearsCard.style.display = 'none';
                 }
-            } catch (e) {
-                // silent fallback to current value
-            }
+            });
+
+            // Handle form submission
+            document.getElementById('addCopiesForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Ensure all year inputs are filled before submission
+                const yearInputs = copiesYearsContainer.querySelectorAll('.copy-year-input');
+                const fallbackYear = acquisitionYearInput.value || new Date().getFullYear().toString();
+                
+                yearInputs.forEach(input => {
+                    if (!input.value || input.value.trim() === '') {
+                        input.value = fallbackYear;
+                    }
+                });
+                
+                // Get form data and submit
+                const formData = new FormData(this);
+                const action = this.getAttribute('action');
+                
+                fetch(action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (response.ok || response.status === 302 || response.status === 301) {
+                        setTimeout(() => {
+                            location.reload();
+                        }, 300);
+                    } else {
+                        alert('Error adding copies. Please try again.');
+                    }
+                })
+                .catch(err => {
+                    console.error('Error:', err);
+                    alert('Error adding copies. Please check the console.');
+                });
+
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(addCopiesModal);
+                if (modal) {
+                    modal.hide();
+                }
+            });
         }
 
-        isbnInput.addEventListener('input', function() {
-            this.value = this.value.replace(/[^0-9]/g, '');
-        });
+    // Print button handler
+    const printBtn = document.getElementById('printBookBtn');
+    if (printBtn) {
+        printBtn.addEventListener('click', function() {
+            try {
+                const viewBookModal = document.getElementById('viewBookModal');
+                const bookData = JSON.parse(viewBookModal.dataset.currentBookData || '{}');
+                const { title, author, isbn, category, publisher, published_year, pages, edition,
+                    condition, acquisition_type, source_of_funds, cost_price, purchase_price,
+                    available_copies, copies, control_numbers, copy_status, copy_years } = bookData;
 
-        pagesInput.addEventListener('input', function() {
-            this.value = this.value.replace(/[^0-9]/g, '');
-        });
+                // Format current date
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-        categorySelect.addEventListener('change', toggleOther);
-        otherInput.addEventListener('input', syncOtherCategory);
-        callNumberInput.addEventListener('input', updateControlNumbers);
+                // Build print content with professional layout matching print.blade.php
+                let printContent = `
+                    <!-- School Header -->
+                    <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #1e3a8a; padding-bottom: 20px;">
+                        <img src="{{ asset('images/snhs-logo.png') }}" alt="SNHS Logo" style="width: 80px; height: 80px; object-fit: contain; margin-bottom: 10px;">
+                        <h1 style="font-size: 24px; font-weight: bold; color: #1e3a8a; margin: 10px 0 5px 0;">Subic National High School</h1>
+                        <p style="font-size: 14px; color: #555; margin: 0; margin-bottom: 15px;">Mangan-vaca, Subic, Zambales</p>
+                        <h2 style="font-size: 20px; font-weight: bold; color: #1e3a8a; margin: 15px 0 0 0;">Book Details Report</h2>
+                    </div>
 
-        addCopyBtn.addEventListener('click', function() {
-            const nextCtrl = getNextControlNumber();
-            addCopyRow(nextCtrl);
-        });
+                    <!-- Report Metadata -->
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 12px; color: #666;">
+                        <div><strong>Report Date:</strong> ${dateStr}</div>
+                        <div><strong>Time:</strong> ${timeStr}</div>
+                    </div>
 
-        copiesInput.addEventListener('change', function() {
-            const desired = parseInt(copiesInput.value) || 1;
-            const current = copiesContainer.querySelectorAll('tr').length;
-            if (desired > current) {
-                for (let i = current; i < desired; i++) {
-                    const nextCtrl = getNextControlNumber();
-                    addCopyRow(nextCtrl);
+                    <!-- Main Book Details Table -->
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                        <thead style="background-color: #1e3a8a; color: white; font-weight: bold;">
+                            <tr>
+                                <th style="padding: 10px; text-align: left; font-size: 12px; border: 1px solid #ddd;">Field</th>
+                                <th style="padding: 10px; text-align: left; font-size: 12px; border: 1px solid #ddd;">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="background-color: #f9f9f9;">
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd; font-weight: bold;">Title</td>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd;">${title || '-'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd; font-weight: bold;">Author</td>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd;">${author || '-'}</td>
+                            </tr>
+                            <tr style="background-color: #f9f9f9;">
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd; font-weight: bold;">ISBN</td>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd;">${isbn || '-'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd; font-weight: bold;">Category</td>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd;">${category || '-'}</td>
+                            </tr>
+                            <tr style="background-color: #f9f9f9;">
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd; font-weight: bold;">Publisher</td>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd;">${publisher || '-'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd; font-weight: bold;">Published Year</td>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd;">${published_year || '-'}</td>
+                            </tr>
+                            <tr style="background-color: #f9f9f9;">
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd; font-weight: bold;">Pages</td>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd;">${pages || '-'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd; font-weight: bold;">Edition</td>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd;">${edition || '-'}</td>
+                            </tr>
+                            <tr style="background-color: #f9f9f9;">
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd; font-weight: bold;">Condition</td>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd;">${condition || '-'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd; font-weight: bold;">Acquisition Type</td>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd;">${acquisition_type || '-'}</td>
+                            </tr>
+                            <tr style="background-color: #f9f9f9;">
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd; font-weight: bold;">Source of Funds</td>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd;">${source_of_funds || '-'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd; font-weight: bold;">Cost Price</td>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd;">${cost_price || '-'}</td>
+                            </tr>
+                            <tr style="background-color: #f9f9f9;">
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd; font-weight: bold;">Purchase Price</td>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd;">${purchase_price || '-'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd; font-weight: bold;">Available / Total Copies</td>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd;">${available_copies || '0'} / ${copies || '0'}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                `;
+
+                // Add physical copies if available
+                if (control_numbers && control_numbers.length > 0) {
+                    printContent += `
+                        <h3 style="color: #1e3a8a; margin-top: 30px; font-size: 16px; margin-bottom: 15px;">Physical Copies (${control_numbers.length})</h3>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead style="background-color: #1e3a8a; color: white; font-weight: bold;">
+                                <tr>
+                                    <th style="padding: 10px; text-align: left; font-size: 12px; border: 1px solid #ddd;">Copy #</th>
+                                    <th style="padding: 10px; text-align: left; font-size: 12px; border: 1px solid #ddd;">Control #</th>
+                                    <th style="padding: 10px; text-align: center; font-size: 12px; border: 1px solid #ddd;">Year</th>
+                                    <th style="padding: 10px; text-align: center; font-size: 12px; border: 1px solid #ddd;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    control_numbers.forEach((cn, idx) => {
+                        const status = copy_status?.[idx] || 'Available';
+                        const year = copy_years?.[idx] || new Date().getFullYear();
+                        const bgColor = idx % 2 === 0 ? '#f9f9f9' : 'white';
+                        printContent += `
+                            <tr style="background-color: ${bgColor};">
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd;">Copy #${idx + 1}</td>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd;">${cn}</td>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd; text-align: center;">${year}</td>
+                                <td style="padding: 8px 10px; font-size: 11px; border: 1px solid #ddd; text-align: center;">${status}</td>
+                            </tr>
+                        `;
+                    });
+                    printContent += `
+                            </tbody>
+                        </table>
+                    `;
                 }
-            } else if (desired < current) {
-                for (let i = current; i > desired; i--) {
-                    copiesContainer.querySelectorAll('tr')[i-1].remove();
-                }
-                updateControlNumbers();
+
+                // Add summary footer
+                printContent += `
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #1e3a8a; font-size: 12px; text-align: right; color: #555;">
+                        Generated by SNHS Library System
+                    </div>
+                `;
+
+                // Open print window with matching styles
+                const printWindow = window.open('', 'PrintWindow', 'width=900,height=700');
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
+                        <title>Book Details - Print</title>
+                        <style>
+                            body {
+                                font-family: 'Arial', sans-serif;
+                                background: #fff;
+                                color: #333;
+                                padding: 20px;
+                                margin: 0;
+                            }
+                            table {
+                                width: 100%;
+                                border-collapse: collapse;
+                            }
+                            h3 {
+                                margin: 30px 0 15px 0;
+                                color: #1e3a8a;
+                                font-size: 16px;
+                            }
+                            @media print {
+                                body { 
+                                    padding: 10px;
+                                    margin: 0;
+                                }
+                                table {
+                                    page-break-inside: avoid;
+                                    margin-top: 10px;
+                                }
+                                table tbody tr {
+                                    page-break-inside: avoid;
+                                }
+                                h3 {
+                                    page-break-after: avoid;
+                                    margin-top: 25px;
+                                }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        ${printContent}
+                    </body>
+                    </html>
+                `);
+                printWindow.document.close();
+                printWindow.focus();
+                
+                // Delay print to allow content to render
+                setTimeout(() => {
+                    printWindow.print();
+                }, 250);
+            } catch (error) {
+                console.error('Print error:', error);
+                alert('Error printing book details. Please try again.');
             }
-        });
-
-        form.addEventListener('submit', function(e) {
-            const selectedValue = categorySelect.value;
-            const customValue = otherInput.value.trim();
-            if (customValue && selectedValue !== customValue) {
-                let option = Array.from(categorySelect.options).find(o => o.value === customValue);
-                if (!option) {
-                    const opt = document.createElement('option');
-                    opt.value = customValue;
-                    opt.textContent = customValue;
-                    opt.text = customValue;
-                    const otherOption = categorySelect.querySelector('option[value="other"]');
-                    categorySelect.insertBefore(opt, otherOption);
-                }
-                categorySelect.value = customValue;
-            }
-        });
-
-        addBookModal.addEventListener('show.bs.modal', function() {
-            form.reset();
-            copiesInput.value = 1;
-            toggleOther();
-            initCopiesFromCount();
-            refreshBase();
         });
     }
+
 });
 </script>
 

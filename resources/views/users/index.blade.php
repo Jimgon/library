@@ -1,3 +1,30 @@
+
+@push('styles')
+<style>
+@media print {
+    /* Prevent page break between header and table */
+    .card-header, .card-body, .table-responsive, table {
+        page-break-inside: avoid !important;
+    }
+    /* Reduce top/bottom margins for print */
+    .container-fluid, .card {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    /* Hide navigation, buttons, and modals for print */
+    .btn, .modal, .alert, .pagination, #debugState, #importModal {
+        display: none !important;
+    }
+    /* Make table full width for print */
+    .table-responsive, table {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+</style>
+@endpush
 @extends('layouts.app')
 
 @section('content')
@@ -5,11 +32,14 @@
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <h1 class="h2 mb-0">Students List</h1>
         <div class="d-flex gap-2">
-            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#importModal">
-                <i class="bi bi-upload me-2"></i>Import Students
+            <button type="button" class="btn btn-dark " data-bs-toggle="modal" data-bs-target="#importModal">
+               <i class="bi bi-download"></i>  Import Students
             </button>
-            <a href="{{ route('users.create') }}" class="btn btn-primary">
+            <a href="{{ route('users.create') }}" class="btn btn-success ">
                 <i class="bi bi-plus-circle me-2"></i>Add New Student
+            </a>
+            <a href="{{ route('users.print', request()->query()) }}" target="_blank" class="btn btn-primary">
+                <i class="bi bi-printer me-2"></i>Print All Students
             </a>
         </div>
     </div>
@@ -37,16 +67,27 @@
 
     {{-- Search Form --}}
     <form class="row g-3 mb-4" action="{{ route('users.index') }}" method="GET">
-        <div class="col-md-8">
-            <input class="form-control" type="search" name="search" value="{{ request('search') }}" placeholder="Search students by name, LRN..." onchange="this.form.submit()">
+        <div class="col-md-3">
+            <input class="form-control" type="search" name="name" value="{{ request('name') }}" placeholder="Search by name..." onchange="this.form.submit()">
         </div>
-        <div class="col-md-4">
+        <div class="col-md-2">
+            <input class="form-control" type="search" name="strand" value="{{ request('strand') }}" placeholder="Strand (STEM, ABM...)..." onchange="this.form.submit()">
+        </div>
+        <div class="col-md-2">
+            <input class="form-control" type="search" name="lrn" value="{{ request('lrn') }}" placeholder="LRN..." onchange="this.form.submit()">
+        </div>
+        <div class="col-md-2">
             <select class="form-select" name="grade" onchange="this.form.submit()">
                 <option value="">Year Level</option>
                 @for($i = 7; $i <= 12; $i++)
                     <option value="{{ $i }}" {{ request('grade') == $i ? 'selected' : '' }}>Grade {{ $i }}</option>
                 @endfor
             </select>
+        </div>
+        <div class="col-md-3">
+            <button type="button" class="btn btn-outline-secondary w-100" onclick="(function(){document.querySelector('input[name=name]').value=''; document.querySelector('input[name=strand]').value=''; document.querySelector('input[name=lrn]').value=''; document.querySelector('select[name=grade]').value=''; document.querySelector('form').submit();})()">
+                Clear Filters
+            </button>
         </div>
     </form>
 
@@ -115,7 +156,7 @@
                         <th class="border-0 fw-semibold d-none d-xl-table-cell">Address</th>
                         <th class="border-0 fw-semibold">Current Borrowed Books</th>
                         <th class="border-0 fw-semibold">Remarks</th>
-                        <th class="border-0 fw-semibold d-none d-xl-table-cell">Notes</th>
+                        <!-- Notes column removed -->
                         <th class="border-0 fw-semibold text-center">Actions</th>
                     </tr>
                 </thead>
@@ -279,7 +320,7 @@
                                                                     $itemBadgeClass = 'bg-danger';
                                                                 } elseif ($lower === 'late return') {
                                                                     // late return -> yellow
-                                                                    $liClass = 'list-group-item-warning';
+                                                                    $liClass = 'list-group-item-warning ';
                                                                     $itemBadgeClass = 'bg-warning';
                                                                 } else {
                                                                     // On Time or other -> green or neutral
@@ -326,7 +367,7 @@
                                     }
                                 @endphp
 
-                                <span class="badge @if($totalOverdue > 0 && !$user->remark) bg-danger @elseif(in_array($user->remark, ['Cleared', 'Good Standing'])) bg-success @elseif($user->remark == 'Not Cleared') bg-danger @else bg-warning @endif">
+                                <span class="badge @if($totalOverdue > 0 && !$user->remark) bg-danger @elseif(in_array($user->remark, ['Cleared', 'Good Standing'])) bg-success @elseif($user->remark == 'Not Cleared') bg-danger @else bg-success @endif">
                                     {{ $displayRemark }}
                                 </span>
                             </td>

@@ -119,7 +119,7 @@
                     <div class="mb-6 rounded-lg border-l-4 border-red-500 bg-red-50
                                 dark:border-red-700 dark:bg-red-950/30 px-5 py-4 text-sm text-red-700 dark:text-red-400">
                         <div class="flex items-start gap-3">
-                            <i class="fas fa-exclamation-circle flex-shrink-0 mt-0.5"></i>
+                            <i class="fas fa-exclamation-circle shrink-0 mt-0.5"></i>
                             <ul class="space-y-1 flex-1">
                                 @foreach ($errors->all() as $error)
                                     <li>{{ $error }}</li>

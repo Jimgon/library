@@ -73,7 +73,7 @@
                                placeholder="+63 9XXXXXXXXX"
                                pattern="^\+63\s?9\d{9}$"
                                title="Enter Philippine mobile number starting with +63 9 and 10 digits (e.g. +63 9123456789)"
-                               inputmode="tel" maxlength="11"
+                               inputmode="tel" maxlength="14"
                                oninput="this.value = this.value.replace(/[^\d+\s]/g, '')">
                     </div>
                     <div class="col-md-6">

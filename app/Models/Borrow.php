@@ -18,6 +18,8 @@ class Borrow extends Model
         'remark',
         'notes',
         'role',
+        'origin',
+        'copy_number',
     ];
 
     protected $casts = [
@@ -26,13 +28,26 @@ class Borrow extends Model
         'returned_at' => 'datetime',
     ];
 
+    // Get the borrower (either User or Teacher based on the 'role' field)
     public function user()
     {
+        if ($this->role === 'teacher') {
+            return $this->belongsTo(Teacher::class, 'user_id');
+        }
         return $this->belongsTo(User::class, 'user_id');
     }
 
     public function book()
     {
         return $this->belongsTo(Book::class, 'book_id');
+    }
+
+    // Accessor to get the borrower (User or Teacher) directly
+    public function getBorrower()
+    {
+        if ($this->role === 'teacher') {
+            return Teacher::find($this->user_id);
+        }
+        return User::find($this->user_id);
     }
 }

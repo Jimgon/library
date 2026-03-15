@@ -357,6 +357,11 @@
                     <div class="row" id="copiesContainer">
                     </div>
                 </div>
+                            <div class="mt-3 text-end">
+                                <button type="button" id="printBookBtn" class="btn btn-outline-secondary">
+                                    <i class="bi bi-printer me-1"></i>Print
+                                </button>
+                            </div>
             </div>
             <div class="modal-footer border-0">
                 <a href="#" id="editBookBtn" class="btn btn-primary">
@@ -570,6 +575,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Update edit button link
             document.getElementById('editBookBtn').href = `/books/${bookId}/edit`;
+
+            // Store current book data in the modal for print button to access
+            viewBookModal.dataset.currentBookData = JSON.stringify({
+                title, author, isbn, category, publisher, publishedYear, pages, edition,
+                condition, acquisitionType, sourceOfFunds, costPrice, purchasePrice,
+                availableCopies, copies, controlNumbers, copyStatus
+            });
         });
     }
 });

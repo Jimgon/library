@@ -58,4 +58,33 @@
         </div>
     </div>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Row click for all archive tables (books, teachers, students, staff)
+        document.querySelectorAll('.archive-table table tr[data-href]').forEach(function(row) {
+            row.addEventListener('click', function() {
+                // You can customize this to show a modal or details page
+                // For now, just highlight the row
+                this.classList.toggle('table-active');
+            });
+        });
+        // Tab hover effect
+        document.querySelectorAll('.nav-tabs .nav-link').forEach(function(tab) {
+            tab.addEventListener('mouseenter', function() {
+                this.style.background = '#dbeafe';
+            });
+            tab.addEventListener('mouseleave', function() {
+                if (!this.classList.contains('active')) {
+                    this.style.background = '#f3f4f6';
+                }
+            });
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.nav-tabs .nav-link').forEach(function(other) {
+                    other.style.background = '#f3f4f6';
+                });
+                this.style.background = '#e0e7ff';
+            });
+        });
+    });
+</script>
 @endsection

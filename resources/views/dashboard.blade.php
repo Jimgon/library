@@ -21,19 +21,19 @@
     <div class="d-flex gap-4 mb-4" style="flex-wrap:wrap;">
         <div class="flex-fill min-w-0" style="min-width:200px;">
             <div style="background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;padding:1.5rem 1rem;box-shadow:0 1px 2px 0 #0001;">
-                <div style="font-size:1.1rem;font-weight:600;color:#111;">Total Books</div>
+                <div style="font-size:1.1rem;font-weight:600;color:#111;">Total Book/s</div>
                 <div style="font-size:2rem;font-weight:700;color:#00000;">{{ $totalBooks }}</div>
             </div>
         </div>
         <div class="flex-fill min-w-0" style="min-width:200px;">
             <div style="background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;padding:1.5rem 1rem;box-shadow:0 1px 2px 0 #0001;">
-                <div style="font-size:1.1rem;font-weight:600;color:#111;">Total Users</div>
+                <div style="font-size:1.1rem;font-weight:600;color:#111;">Total User/s</div>
                 <div style="font-size:2rem;font-weight:700;color:#00000;">{{ $totalUsers }}</div>
             </div>
         </div>
         <div class="flex-fill min-w-0" style="min-width:200px;">
             <div style="background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;padding:1.5rem 1rem;box-shadow:0 1px 2px 0 #0001;">
-                <div style="font-size:1.1rem;font-weight:600;color:#111;">Total Borrows</div>
+                <div style="font-size:1.1rem;font-weight:600;color:#111;">Total Borrow/s</div>
                 <div style="font-size:2rem;font-weight:700;color:#00000;">{{ $totalBorrows }}</div>
             </div>
         </div>
@@ -44,7 +44,7 @@
         <!-- Students with Unreturned Books -->
         <div class="flex-fill min-w-0" style="min-width:340px;">
             <div style="background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;box-shadow:0 1px 2px 0 #0001;display:flex;flex-direction:column;height:100%;">
-                <div style="border-bottom:1px solid #e5e7eb;padding:0.75rem 1.25rem;font-weight:600;font-size:1.05rem;">Students with Unreturned Books</div>
+                <div style="border-bottom:1px solid #e5e7eb;padding:0.75rem 1.25rem;font-weight:600;font-size:1.05rem;">Students with Unreturned Book/s</div>
                 <div style="padding:1rem;max-height:400px;overflow-y:auto;">
                     @if($studentsWithUnreturned->count() > 0)
                         <ul style="list-style:none;padding:0;margin-bottom:1rem;">
@@ -81,7 +81,7 @@
         <!-- Most Borrowed Books Chart -->
         <div class="flex-fill min-w-0" style="min-width:340px;">
             <div style="background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;box-shadow:0 1px 2px 0 #0001;display:flex;flex-direction:column;height:100%;">
-                <div style="border-bottom:1px solid #e5e7eb;padding:0.75rem 1.25rem;font-weight:600;font-size:1.05rem;">Most Borrowed Books</div>
+                <div style="border-bottom:1px solid #e5e7eb;padding:0.75rem 1.25rem;font-weight:600;font-size:1.05rem;">Most Borrowed Book/s</div>
                 <div style="padding:1rem;">
                     <div style="height: 300px;">
                         <canvas id="mostBorrowedBooksChart"></canvas>
@@ -94,7 +94,7 @@
     <!-- Row 2: Available Books (shadcn style) -->
     <div class="mt-4">
         <div style="background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;box-shadow:0 1px 2px 0 #0001;">
-            <div style="border-bottom:1px solid #e5e7eb;padding:0.75rem 1.25rem;font-weight:600;font-size:1.05rem;">Available Books</div>
+            <div style="border-bottom:1px solid #e5e7eb;padding:0.75rem 1.25rem;font-weight:600;font-size:1.05rem;">Available Book/s</div>
             <div style="padding:1rem;max-height:400px;overflow-y:auto;">
                 @if($availableBooks->count() > 0)
                     <table style="width:100%;border-collapse:collapse;font-size:0.98rem;">

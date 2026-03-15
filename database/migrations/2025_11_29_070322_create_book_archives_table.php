@@ -15,6 +15,8 @@ return new class extends Migration
             $table->string('isbn')->nullable();
             $table->string('publisher')->nullable();
             $table->integer('year')->nullable();
+            $table->string('ctrl_number')->nullable();
+            $table->string('condition')->nullable();
             $table->timestamps();
         });
     }

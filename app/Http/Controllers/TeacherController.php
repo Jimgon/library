@@ -95,6 +95,12 @@ class TeacherController extends Controller
         return redirect()->route('teachers.index')->with('success', 'Remark updated successfully.');
     }
 
+    public function showBorrowHistory(Teacher $teacher)
+    {
+        $borrows = $teacher->borrows()->with('book')->latest('borrowed_at')->get();
+        return view('users.teacher-borrow-history', compact('teacher', 'borrows'));
+    }
+
     public function destroy(Teacher $teacher)
     {
         $name = $teacher->name;

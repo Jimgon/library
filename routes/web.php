@@ -19,16 +19,20 @@ Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
 Route::get('/create-admin', [AdminSetupController::class, 'showCreateForm'])->name('admin.create');
 Route::post('/create-admin', [AdminSetupController::class, 'create'])->name('admin.store');
 
+// Print all students (move outside auth group for testing)
+Route::get('users/print', [UserController::class, 'printAll'])->name('users.print');
+Route::get('users/print-teacher', [UserController::class, 'printTeachers'])->name('users.print-teacher');
 // ------------------ AUTHENTICATED ROUTES ------------------
 Route::middleware(['auth'])->group(function () {
     // Reports page
-    Route::get('reports', [\App\Http\Controllers\DashboardController::class, 'reports'])->name('reports');
+    Route::get('reports', [DashboardController::class, 'reports'])->name('reports');
     Route::get('teachers', [\App\Http\Controllers\TeacherController::class, 'index'])->name('teachers.index');
     Route::get('teachers/create', [\App\Http\Controllers\TeacherController::class, 'create'])->name('teachers.create');
     Route::post('teachers', [\App\Http\Controllers\TeacherController::class, 'store'])->name('teachers.store');
     Route::get('teachers/import', [\App\Http\Controllers\TeacherController::class, 'importForm'])->name('teachers.import.form');
     Route::post('teachers/import', [\App\Http\Controllers\TeacherController::class, 'import'])->name('teachers.import');
     Route::get('teachers/{teacher}/edit', [\App\Http\Controllers\TeacherController::class, 'edit'])->name('teachers.edit');
+    Route::get('teachers/{teacher}/borrow-history', [\App\Http\Controllers\TeacherController::class, 'showBorrowHistory'])->name('teachers.borrow-history');
     Route::put('teachers/{teacher}', [\App\Http\Controllers\TeacherController::class, 'update'])->name('teachers.update');
     Route::patch('teachers/{teacher}/remark', [\App\Http\Controllers\TeacherController::class, 'updateRemark'])->name('teachers.updateRemark');
     Route::delete('teachers/{teacher}', [\App\Http\Controllers\TeacherController::class, 'destroy'])->name('teachers.destroy');
@@ -40,6 +44,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('books/import', [BookController::class, 'showImportForm'])->name('books.import');
     Route::post('books/import', [BookController::class, 'import'])->name('books.import.post');
     Route::get('books/catalog', [BookController::class, 'catalog'])->name('books.catalog');
+    Route::get('books/lost-damage', [BookController::class, 'lostDamage'])->name('books.lost-damage');
+    Route::post('books/lost-damage/{lostDamagedItem}/return', [BookController::class, 'lostDamagedReturn'])->name('books.lost-damage.return');
+    Route::post('books/lost-damage/{lostDamagedItem}/replace', [BookController::class, 'lostDamagedReplace'])->name('books.lost-damage.replace');
+
     // Route::get('books/distribute/create', [BookController::class, 'distributeCreate'])->name('books.distribute.create');
     // Route::post('books/distribute', [BookController::class, 'distributeStore'])->name('books.distribute.store');
     // Route::post('books/distribute/import', [BookController::class, 'distributeImport'])->name('books.distribute.import.post');
@@ -52,6 +60,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('books/distribute/{id}', [BookController::class, 'distributeDestroy'])->name('books.distribute.destroy');
     Route::get('books/print', [BookController::class, 'printAll'])->name('books.print');
     Route::post('books/{book}/add-copies', [BookController::class, 'addCopies'])->name('books.addCopies');
+    Route::post('books/{book}/delete-copy', [BookController::class, 'deleteCopy'])->name('books.deleteCopy');
     Route::resource('books', BookController::class);
     Route::get('books/api/next-control-base', [BookController::class, 'getNextControlBase'])->name('books.api.nextControlBase');
     Route::get('books/catalog', [BookController::class, 'catalog'])->name('books.catalog');
@@ -63,11 +72,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('users/students', [UserController::class, 'students'])->name('users.students');
 
     // Utilities backup download/list routes
-    Route::get('utilities/backups', [\App\Http\Controllers\UtilitiesController::class, 'listBackups'])->name('utilities.backups');
-    Route::get('utilities/download-backup/{filename}', [\App\Http\Controllers\UtilitiesController::class, 'downloadBackup'])->name('utilities.downloadBackup');
+    Route::get('utilities/backups', [UtilitiesController::class, 'listBackups'])->name('utilities.backups');
+    Route::get('utilities/download-backup/{filename}', [UtilitiesController::class, 'downloadBackup'])->name('utilities.downloadBackup');
     // ...existing code...
     Route::post('users/import', [UserController::class, 'import'])->name('users.import');
     Route::patch('users/{user}/remark', [UserController::class, 'updateRemark'])->name('users.updateRemark');
+    
+// Print all students
+Route::get('users/print', [UserController::class, 'printAll'])->name('users.print');
     
 
     // Borrow routes
@@ -82,7 +94,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('return', [BorrowController::class, 'returnIndex'])->name('borrow.return.index');
         Route::post('return/{borrow}', [BorrowController::class, 'processReturn'])->name('borrow.return.process'); 
         Route::get('{borrow}/receipt', [BorrowController::class, 'receipt'])->name('borrow.receipt');
-        Route::get('receipt/{borrow}/print', [BorrowController::class, 'printReceipt'])->name('borrow.receipt.print');
+        Route::get('receipt/all/print', [BorrowController::class, 'receiptAll'])->name('borrow.receipt.all');
     });
 
     // Admin-only staff management routes

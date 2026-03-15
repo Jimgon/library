@@ -36,13 +36,29 @@ class Book extends Model
 
         // control numbers stored per copy
         'control_numbers',
+        'copy_years',
+        'copy_conditions',
     ];
 
     protected $casts = [
         'control_numbers' => 'array',
+        'copy_years' => 'array',
+        'copy_status' => 'array',
+        'copy_conditions' => 'array',
     ];
 
     protected $dates = ['deleted_at'];
+
+    /**
+     * Ensure copy_years is always an array
+     */
+    public function getCopyYearsAttribute($value)
+    {
+        if (is_null($value) || (is_array($value) && empty($value))) {
+            return [];
+        }
+        return is_array($value) ? $value : json_decode($value, true) ?? [];
+    }
 
     public function borrows()
     {

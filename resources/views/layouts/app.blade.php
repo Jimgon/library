@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Library Management System</title>
+        <link rel="icon" type="image/png" href="{{ asset('images/snhs-logo.png') }}">
+
 
     <!-- Bootstrap & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -54,7 +57,7 @@
             opacity: 0.85;
         }
         .sidebar .nav-link:hover, .sidebar .nav-link.active {
-            background: #bfdbfe !important;
+            background: #e0f2fe !important;
             color:  #2563eb!important;
         }
         .sidebar .nav-link.text-danger {
@@ -143,14 +146,21 @@
     color: #6c757d;
 }
 
+
+.logo {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+}
     </style>
 </head>
 <body>
 
 <!-- Sidebar -->
 <div class="sidebar d-flex flex-column p-3">
-    <a class="navbar-brand mb-4 fw-bold" href="{{ route('books.index') }}">
-        <i class="fas fa-book-open"></i> SNHS Library
+    <a class="navbar-brand mb-4 fw-bold d-flex align-items-center gap-2" href="{{ route('dashboard') }}">
+         <img src="{{ asset('images/snhs-logo.png') }}" alt="SNHS Logo" class="logo">
+        <span> SNHS Library</span>
     </a>
 
     <nav class="nav flex-column grow">
@@ -175,16 +185,20 @@
         </button>
 
         <div class="collapse ps-3 {{ request()->routeIs('books.*') ? 'show' : '' }}" id="booksMenu">
-            <a class="nav-link{{ request()->routeIs('books.index') ? ' active' : '' }}"
+            {{-- <a class="nav-link{{ request()->routeIs('books.index') ? ' active' : '' }}"
                href="{{ route('books.index') }}">
                 <i class="fas fa-book"></i> Book     Inventory
-            </a>
+            </a> --}}
 
             <a class="nav-link{{ request()->routeIs('books.catalog') ? ' active' : '' }}"
                href="{{ route('books.catalog') }}">
-                <i class="fas fa-archive"></i> Book Catalog
+                <i class="bi bi-book-fill"></i> Book Inventory
             </a>
 
+             <a class="nav-link{{ request()->routeIs('books.lost-damage') ? ' active' : '' }}"
+               href="{{ route('books.lost-damage') }}">
+                <i class="bi bi-journal-x"></i> Lost & Damaged Books
+            </a>
         </div>
        
         <!-- Users (Collapsible) -->
@@ -209,7 +223,7 @@
         >
             <a class="nav-link{{ request()->routeIs('users.index') ? ' active' : '' }}"
                href="{{ route('users.index') }}">
-                <i class="fas fa-user-graduate"></i> Students
+                <i class="bi bi-person-fill"></i> Students
             </a>
 
                 <a class="nav-link{{ request()->routeIs('teachers.index') ? ' active' : '' }}"

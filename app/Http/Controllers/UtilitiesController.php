@@ -30,6 +30,7 @@ class UtilitiesController extends Controller
         }
         return view('utilities.backups', compact('backups'));
     }
+    
 
     // Download a specific backup file
     public function downloadBackup($filename)
@@ -58,7 +59,7 @@ class UtilitiesController extends Controller
     // Archive Page
     public function archive()
     {
-        $books = Book::onlyTrashed()->paginate(10);
+        $books = \App\Models\BookArchive::query()->latest()->paginate(10);
         $students = User::onlyTrashed()->paginate(10);
         $staff = SystemUser::onlyTrashed()->paginate(10);
         $teachers = Teacher::onlyTrashed()->paginate(10);

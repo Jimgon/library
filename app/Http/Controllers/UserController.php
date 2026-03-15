@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\ActivityLog; 
+use App\Models\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -36,22 +37,29 @@ class UserController extends Controller
             $q->whereNull('role')->orWhere('role', '!=', 'teacher');
         })->with('borrows.book'); // eager-load borrows with books
 
-        if ($request->filled('search')) {
-            $search = $request->input('search');
-            $query->where(function($q) use ($search) {
-                $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('grade_section', 'like', "%{$search}%")
-                  ->orWhere('lrn', 'like', "%{$search}%")
-                  ->orWhere('phone_number', 'like', "%{$search}%")
-                  ->orWhere('address', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+        // Handle separate search parameters
+        if ($request->filled('name')) {
+            $name = $request->input('name');
+            $query->where(function($q) use ($name) {
+                $q->where('first_name', 'like', "%{$name}%")
+                  ->orWhere('last_name', 'like', "%{$name}%");
             });
+        }
+
+        if ($request->filled('strand')) {
+            $strand = $request->input('strand');
+            $query->where('grade_section', 'like', "%{$strand}%");
+        }
+
+        if ($request->filled('lrn')) {
+            $lrn = $request->input('lrn');
+            $query->where('lrn', 'like', "%{$lrn}%");
         }
 
         if ($request->filled('grade')) {
             $grade = $request->input('grade');
-            $query->where('grade_section', 'like', "%{$grade}%");
+            // Use regex to match grade as a separate word (starting with the grade and followed by space or end of string)
+            $query->whereRaw("grade_section REGEXP ?", ["^{$grade}([^0-9]|$)"]);
         }
 
         $users = $query->orderBy('last_name')
@@ -210,6 +218,59 @@ class UserController extends Controller
         return redirect()->route('users.index')->with('success', 'User updated successfully.');
     }
 
+//print all students
+public function printAll(Request $request)
+    {
+        $query = User::where(function($q) {
+            $q->whereNull('role')->orWhere('role', '!=', 'teacher');
+        });
+
+        // Apply filters if provided
+        if ($request->has('name') && $request->name) {
+            $name = $request->name;
+            $query->where(function ($q) use ($name) {
+                $q->whereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$name}%"])
+                  ->orWhereRaw("CONCAT(last_name, ' ', first_name) LIKE ?", ["%{$name}%"])
+                  ->orWhere('first_name', 'LIKE', "%{$name}%")
+                  ->orWhere('last_name', 'LIKE', "%{$name}%");
+            });
+        }
+
+        if ($request->has('grade') && $request->grade) {
+            $grade = $request->grade;
+            // Use regex to match grade as a separate word (starting with the grade and followed by space or end of string)
+            $query->whereRaw("grade_section REGEXP ?", ["^{$grade}([^0-9]|$)"]);
+        }
+
+        if ($request->has('strand') && $request->strand) {
+            $strand = $request->strand;
+            $query->where('grade_section', 'LIKE', "%{$strand}%");
+        }
+
+        if ($request->has('lrn') && $request->lrn) {
+            $query->where('lrn', 'LIKE', "%{$request->lrn}%");
+        }
+
+        $students = $query->orderBy('last_name')->orderBy('first_name')->get();
+
+    return view('users.print', compact('students'));
+}
+
+// Print all teachers
+public function printTeachers()
+{
+    $teachers = Teacher::orderBy('last_name')
+        ->orderBy('first_name')
+        ->get()
+        ->map(function ($teacher) {
+            if (!empty($teacher->last_name) || !empty($teacher->first_name)) {
+                $teacher->name = trim($teacher->last_name . ', ' . $teacher->first_name);
+            }
+            return $teacher;
+        });
+
+    return view('users.print-teacher', compact('teachers'));
+}
     public function destroy(User $user)
     {
         $name = $user->first_name . ' ' . $user->last_name;

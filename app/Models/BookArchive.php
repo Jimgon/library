@@ -9,5 +9,7 @@ class BookArchive extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['title', 'author', 'isbn', 'publisher', 'year']; // Add any fields you need
+    protected $fillable = [
+        'title', 'author', 'isbn', 'publisher', 'year', 'ctrl_number', 'condition'
+    ];
 }

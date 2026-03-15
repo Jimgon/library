@@ -7,7 +7,8 @@ use App\Models\Borrow;
 use App\Models\Book;
 use App\Models\User;
 use App\Models\Teacher;
-use App\Models\ActivityLog; 
+use App\Models\ActivityLog;
+use App\Models\LostDamagedItem;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -18,7 +19,7 @@ class BorrowController extends Controller
     // Show form to borrow a book
     public function create()
     {
-        $users = User::where(function($q) {
+        $users = User::where(function(\Illuminate\Database\Eloquent\Builder$q) {
             $q->whereNull('role')->orWhere('role', '!=', 'teacher');
         })->whereNull('deleted_at')->get();
         // teachers are stored in separate model/table
@@ -48,7 +49,7 @@ class BorrowController extends Controller
     public function createForDistribute()
     {
         // Only pass teachers from the separate Teacher collection
-        $users = Teacher::whereNull('deleted_at')->orderBy('name')->get();
+        $users = Teacher::whereNull('deleted_at')->orderBy('name', 'asc')->get();
 
         // use regular books for distribution; show entire inventory (even zero copies)
         $books = Book::all();
@@ -67,10 +68,13 @@ class BorrowController extends Controller
             'due_date'   => 'required|date|after_or_equal:borrowed_at',
             'book_ids'   => 'required|array|min:1',
             'book_ids.*' => 'required|string',
+            'copy_numbers' => 'nullable|array',
+            'copy_numbers.*' => 'nullable|string',
         ]);
 
         $userId = $request->user_id;
         $bookIds = $request->book_ids;
+        $copyNumbers = $request->copy_numbers ?? [];
 
         // Verify teacher exists
         $teacher = Teacher::find($userId);
@@ -83,7 +87,7 @@ class BorrowController extends Controller
 
         $success = 0; $errors = [];
 
-        foreach ($bookIds as $bookId) {
+        foreach ($bookIds as $index => $bookId) {
             $book = Book::find($bookId);
             if (!$book) {
                 $errors[] = "Book {$bookId} not found";
@@ -96,15 +100,38 @@ class BorrowController extends Controller
                 continue;
             }
             try {
+                // Use provided control number if available, otherwise auto-assign
+                $controlNumber = $copyNumbers[$index] ?? null;
+                
+                if (!$controlNumber && $book->control_numbers && is_array($book->control_numbers)) {
+                    // Count how many of this book are already borrowed (not returned)
+                    $borrowedCount = Borrow::where('book_id', $bookId)
+                        ->whereNull('returned_at')
+                        ->count();
+                    
+                    // Get the control number at the borrowed count index (next available)
+                    if (isset($book->control_numbers[$borrowedCount])) {
+                        $controlNumber = $book->control_numbers[$borrowedCount];
+                    } else if (count($book->control_numbers) > 0) {
+                        // Fallback to last control number if index out of bounds
+                        $controlNumber = $book->control_numbers[count($book->control_numbers) - 1];
+                    }
+                }
+
                 $borrow = Borrow::create([
-                    'user_id' => $userId,
-                    'book_id' => $bookId,
+                    'user_id'     => $userId,
+                    'book_id'     => $bookId,
                     'borrowed_at' => $borrowDate,
-                    'due_date' => $returnDate,
+                    'due_date'    => $returnDate,
+                    'role'        => 'teacher',
+                    'origin'      => 'distribution',
+                    'copy_number' => $controlNumber,
                 ]);
 
                 // decrement inventory
-                $book->available_copies = max(0, ($book->available_copies ?? 0) - 1);
+                $book->update([
+                    'available_copies' => max(0, ($book->available_copies ?? 0) - 1),
+                ]);
                 if (($book->available_copies ?? 0) < 1) {
                     $book->status = 'borrowed';
                 }
@@ -138,41 +165,47 @@ class BorrowController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'user_id'    => 'required|string',
-            'borrowed_at' => 'required|date',
-            'due_date'   => 'required|date|after_or_equal:borrowed_at',
-            'book_ids'   => 'required|array|min:1|max:3',
-            'book_ids.*' => 'required|string',
+            'user_id'      => 'required|string',
+            'borrowed_at'  => 'required|date',
+            'due_date'     => 'required|date|after_or_equal:borrowed_at',
+            // Allow up to teacher limit here; enforce per-type below.
+            'book_ids'     => 'required|array|min:1|max:3',
+            'book_ids.*'   => 'required|string',
+            'copy_numbers' => 'nullable|array',
+            'copy_numbers.*' => 'nullable|string',
+            'borrow_type'  => 'nullable|in:student,teacher',
         ]);
 
         $userId = $request->user_id;
+        $borrowType = $request->borrow_type ?? 'student'; // default to student
         $bookIds = $request->book_ids;
+        $copyNumbers = $request->copy_numbers ?? [];
 
         // Determine if user is a student or teacher
         $user = User::find($userId);
-        $isTeacher = false;
         if (!$user) {
             $user = Teacher::find($userId);
-            if ($user) {
-                $isTeacher = true;
-            }
         }
+        
+        // Use the provided borrow_type from the form
+        $isTeacher = ($borrowType === 'teacher');
+        $maxBooks = $isTeacher ? 3 : 3;
 
         if (!$user) {
             return redirect()->back()->with('error', 'Student/Teacher not found.');
         }
 
-        // Prevent borrowing if they already have 3 active borrows
+        // Prevent borrowing if they already have the max active borrows
         $activeBorrowCount = Borrow::where('user_id', $userId)
             ->whereNull('returned_at')
             ->count();
         
-        if ($activeBorrowCount >= 3) {
-            return redirect()->back()->with('error', 'You can only have 3 active book borrows at a time. Please return some books first.');
+        if ($activeBorrowCount >= $maxBooks) {
+            return redirect()->back()->with('error', "You can only have {$maxBooks} active book borrows at a time. Please return some books first.");
         }
         
-        if ($activeBorrowCount + count($bookIds) > 3) {
-            return redirect()->back()->with('error', 'You can only borrow ' . (3 - $activeBorrowCount) . ' more book(s). Currently borrowed: ' . $activeBorrowCount);
+        if ($activeBorrowCount + count($bookIds) > $maxBooks) {
+            return redirect()->back()->with('error', 'You can only borrow ' . ($maxBooks - $activeBorrowCount) . ' more book(s). Currently borrowed: ' . $activeBorrowCount);
         }
 
         // Use provided dates instead of defaults
@@ -183,7 +216,7 @@ class BorrowController extends Controller
         $errorCount = 0;
         $errors = [];
 
-        foreach ($bookIds as $bookId) {
+        foreach ($bookIds as $index => $bookId) {
             $book = Book::find($bookId);
 
             if (!$book) {
@@ -200,16 +233,37 @@ class BorrowController extends Controller
 
             // Create borrow record
             try {
+                // Use provided control number if available, otherwise auto-assign
+                $controlNumber = $copyNumbers[$index] ?? null;
+                
+                if (!$controlNumber && $book->control_numbers && is_array($book->control_numbers)) {
+                    // Count how many of this book are already borrowed (not returned)
+                    $borrowedCount = Borrow::where('book_id', $bookId)
+                        ->whereNull('returned_at')
+                        ->count();
+                    
+                    // Get the control number at the borrowed count index (next available)
+                    if (isset($book->control_numbers[$borrowedCount])) {
+                        $controlNumber = $book->control_numbers[$borrowedCount];
+                    } else if (count($book->control_numbers) > 0) {
+                        // Fallback to last control number if index out of bounds
+                        $controlNumber = $book->control_numbers[count($book->control_numbers) - 1];
+                    }
+                }
+
                 $borrow = Borrow::create([
                     'user_id'     => $userId,
                     'book_id'     => $bookId,
                     'borrowed_at' => $borrowDate,
                     'due_date'    => $returnDate,
                     'returned_at' => null,
+                    'role'        => $borrowType,
+                    'origin'      => 'personal',
+                    'copy_number' => $controlNumber,
                 ]);
 
                 // Update book status
-                $book->available_copies = ($book->available_copies ?? 1) - 1;
+                 ($book->available_copies ?? 1) - 1;
                 if ($book->available_copies < 1) {
                     $book->status = 'borrowed';
                 }
@@ -317,6 +371,20 @@ class BorrowController extends Controller
             $borrow->remark = $inputRemark !== '' ? $inputRemark : $computedRemark;
             $borrow->notes = trim(($borrow->notes ? $borrow->notes . "\n" : '') . $request->input('notes', ''));
 
+            // Record lost or damaged items
+            if ($borrow->remark === 'Lost' || $borrow->remark === 'Damage') {
+                LostDamagedItem::create([
+                    'borrow_id' => $borrow->id,
+                    'book_id' => $borrow->book_id,
+                    'user_id' => $borrow->user_id,
+                    'type' => $borrow->remark === 'Lost' ? 'lost' : 'damaged',
+                    'copy_number' => $borrow->copy_number ?? 'BK-' . $borrow->book_id,
+                    'remarks' => $borrow->notes,
+                    'due_date' => $borrow->due_date,
+                    'status' => 'active',
+                ]);
+            }
+
             // Mark as returned
             $borrow->returned_at = now();
             $borrow->save();
@@ -337,10 +405,11 @@ class BorrowController extends Controller
             // Safely update book status
             if ($borrow->book) {
                 $borrow->book->status = 'available';
-                $borrow->book->available_copies = min(
+                $borrow->book->update([
+                    'copies' => min(
                     ($borrow->book->available_copies ?? 0) + 1,
                     $borrow->book->copies ?? PHP_INT_MAX
-                );
+                )]);
                 $borrow->book->save();
             } else {
                 // Check if it's a distributed book
@@ -398,6 +467,30 @@ class BorrowController extends Controller
 
         return view('borrow.receipt', compact('borrow', 'borrowedAt', 'dueDate', 'overdueDays', 'remark'));
     }
+
+    // Generate printable receipts for all active borrows
+    public function receiptAll()
+    {
+        $borrows = Borrow::with(['book', 'user'])->whereNull('returned_at')->orderBy('borrowed_at', 'desc')->get();
+        $today = Carbon::now();
+
+        foreach ($borrows as $borrow) {
+            $borrowedAt = $borrow->borrowed_at ? Carbon::parse($borrow->borrowed_at) : null;
+            $dueDate = $borrow->due_date ? Carbon::parse($borrow->due_date) : null;
+
+            $overdueDays = 0;
+            $remark = 'No Remarks';
+            if ($dueDate && $today->gt($dueDate)) {
+                $overdueDays = (int) ceil($today->diffInDays($dueDate));
+                $remark = "{$overdueDays} day(s) overdue";
+            }
+
+            $borrow->borrowedAt = $borrowedAt;
+            $borrow->dueDate = $dueDate;
+            $borrow->overdueDays = $overdueDays;
+            $borrow->remark = $remark;
+        }
+
+        return view('borrow.receipt-all', compact('borrows'));
+    }
 }
-
-
