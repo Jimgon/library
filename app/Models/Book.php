@@ -74,6 +74,7 @@ class Book extends Model
 
     public function getAvailableCopiesAttribute()
     {
-        return max(0, $this->copies - $this->borrowed_count);
+         return $this->copies - $this->borrowed_copies;
+
     }
 }

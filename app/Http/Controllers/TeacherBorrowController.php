@@ -94,7 +94,7 @@ class TeacherBorrowController extends Controller
     // Process a teacher book return
     public function processReturn(Request $request, $borrowId)
     {
-        $borrow = Borrow::with(['book', 'user'])->where('id', $borrowId)->firstOrFail();
+        $borrow = Borrow::with('book')->where('id', $borrowId)->firstOrFail();
 
         $request->validate([
             'remark' => ['nullable', 'in:No Remarks,On Time,Late Return,Lost,Damage'],
@@ -130,10 +130,13 @@ class TeacherBorrowController extends Controller
         $borrow->returned_at = now();
         $borrow->save();
 
-        // Update user's remark if there's a remark from return (except 'No Remarks')
+        // Update teacher's remark if there's a remark from return (except 'No Remarks')
         if ($borrow->remark && $borrow->remark !== 'No Remarks') {
-            $borrow->user->remark = $borrow->remark;
-            $borrow->user->save();
+            $teacher = $borrow->getBorrower();
+            if ($teacher) {
+                $teacher->remark = $borrow->remark;
+                $teacher->save();
+            }
         }
 
         // Update book status

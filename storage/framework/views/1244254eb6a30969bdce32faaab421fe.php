@@ -1,1 +1,0 @@
-<?php /**PATH C:\Users\user\Herd\library\resources\views/components/confirm-modal.blade.php ENDPATH**/ ?>

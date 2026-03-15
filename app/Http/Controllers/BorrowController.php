@@ -72,9 +72,9 @@ class BorrowController extends Controller
             'copy_numbers.*' => 'nullable|string',
         ]);
 
-        $userId = $request->user_id;
-        $bookIds = $request->book_ids;
-        $copyNumbers = $request->copy_numbers ?? [];
+        $userId = $request->input('user_id');
+        $bookIds = $request->input('book_ids');
+        $copyNumbers = $request->input('copy_numbers') ?? [];
 
         // Verify teacher exists
         $teacher = Teacher::find($userId);
@@ -82,8 +82,8 @@ class BorrowController extends Controller
             return redirect()->back()->with('error', 'Teacher not found.');
         }
 
-        $borrowDate = Carbon::parse($request->borrowed_at);
-        $returnDate = Carbon::parse($request->due_date);
+        $borrowDate = Carbon::parse($request->input('borrowed_at'));
+        $returnDate = Carbon::parse($request->input('due_date'));
 
         $success = 0; $errors = [];
 
@@ -176,10 +176,10 @@ class BorrowController extends Controller
             'borrow_type'  => 'nullable|in:student,teacher',
         ]);
 
-        $userId = $request->user_id;
-        $borrowType = $request->borrow_type ?? 'student'; // default to student
-        $bookIds = $request->book_ids;
-        $copyNumbers = $request->copy_numbers ?? [];
+        $userId = $request->input('user_id');
+        $borrowType = $request->input('borrow_type') ?? 'student'; // default to student
+        $bookIds = $request->input('book_ids');
+        $copyNumbers = $request->input('copy_numbers') ?? [];
 
         // Determine if user is a student or teacher
         $user = User::find($userId);
@@ -209,8 +209,8 @@ class BorrowController extends Controller
         }
 
         // Use provided dates instead of defaults
-        $borrowDate = Carbon::parse($request->borrowed_at);
-        $returnDate = Carbon::parse($request->due_date);
+        $borrowDate = Carbon::parse($request->input('borrowed_at'));
+        $returnDate = Carbon::parse($request->input('due_date'));
 
         $successCount = 0;
         $errorCount = 0;
@@ -263,7 +263,7 @@ class BorrowController extends Controller
                 ]);
 
                 // Update book status
-                 ($book->available_copies ?? 1) - 1;
+                 $book->available_copies =($book->available_copies ?? 1) - 1;
                 if ($book->available_copies < 1) {
                     $book->status = 'borrowed';
                 }
@@ -391,14 +391,10 @@ class BorrowController extends Controller
 
             // Update user's remark if there's a remark from return (except 'No Remarks')
             if ($borrow->remark && $borrow->remark !== 'No Remarks') {
-                $user = User::find($borrow->user_id);
-                if (!$user) {
-                    // Try to load from Teacher model if not found in User model
-                    $user = Teacher::find($borrow->user_id);
-                }
-                if ($user) {
-                    $user->remark = $borrow->remark;
-                    $user->save();
+                $borrower = $borrow->getBorrower();
+                if ($borrower) {
+                    $borrower->remark = $borrow->remark;
+                    $borrower->save();
                 }
             }
 
@@ -422,8 +418,9 @@ class BorrowController extends Controller
                 }
             }
 
-            // Log activity with student name
-            $studentName = $borrow->user ? ($borrow->user->name ?? ($borrow->user->first_name . ' ' . $borrow->user->last_name)) : 'Unknown';
+            // Log activity with student/teacher name
+            $borrower = $borrow->getBorrower();
+            $studentName = $borrower ? ($borrower->name ?? (($borrower->first_name ?? '') . ' ' . ($borrower->last_name ?? ''))) : 'Unknown';
 
             $bookTitle = $borrow->book ? $borrow->book->title : $borrow->book_id;
 
