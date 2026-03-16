@@ -27,25 +27,6 @@
         </div>
     <?php endif; ?>
 
-    
-    <div class="mb-4 p-3 bg-light rounded border">
-        <div class="row g-2 mb-3">
-            <div class="col-md-6">
-                <input id="returnSearch" type="search" class="form-control" placeholder="Search borrower or book..." aria-label="Search returns">
-            </div>
-            <div class="col-md-3">
-                <div class="d-flex gap-2">
-                    <button id="filterAll" type="button" class="btn btn-primary source-filter-btn" data-filter="all" style="flex: 1;">All</button>
-                    <button id="filterPersonal" type="button" class="btn btn-outline-dark source-filter-btn" data-filter="personal" style="flex: 1;">Personal</button>
-                    <button id="filterDistribution" type="button" class="btn btn-outline-dark source-filter-btn" data-filter="distribution" style="flex: 1;">Distribution</button>
-                </div>
-            </div>
-            <div class="col-md-3 d-flex gap-2">
-                <a href="<?php echo e(route('borrow.receipt.all')); ?>" target="_blank" class="btn btn-outline-dark" style="white-space: nowrap; text-decoration: none;"><i class="bi bi-printer me-1"></i>Print All</a>
-            </div>
-        </div>
-    </div>
-
     <style>
         @media print {
             .container-fluid > div:first-child,
@@ -99,6 +80,14 @@
             <div class="card shadow-sm">
                 <div class="card-header">
                     <h5 class="card-title mb-0">Student Pending Returns</h5>
+                </div>
+                
+                <div class="p-2 bg-light border-bottom d-flex justify-content-between align-items-center gap-2">
+                    <input type="search" class="form-control form-control-sm student-search" placeholder="Search borrower, book, or control #..." style="max-width: 300px;" aria-label="Search student returns">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-primary student-filter-btn" data-filter="all">All</button>
+                        <button class="btn btn-sm btn-outline-dark student-filter-btn" data-filter="personal">Personal</button>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -194,7 +183,7 @@
                 }
             ?>
 
-            <tr class="borrow-row">
+            <tr class="borrow-row" data-origin="<?php echo e($borrow->origin ?? 'personal'); ?>">
                 <td>
                     <input type="checkbox" class="borrow-checkbox form-check-input" data-borrow-id="<?php echo e($borrow->id); ?>" data-quantity="<?php echo e($quantity); ?>" aria-label="Select this transaction">
                 </td>
@@ -337,6 +326,15 @@
                 <div class="card-header">
                     <h5 class="card-title mb-0">Teacher Pending Returns</h5>
                 </div>
+                
+                <div class="p-2 bg-light border-bottom d-flex justify-content-between align-items-center gap-2">
+                    <input type="search" class="form-control form-control-sm teacher-search" placeholder="Search borrower, book, or control #..." style="max-width: 300px;" aria-label="Search teacher returns">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-primary teacher-filter-btn" data-filter="all">All</button>
+                        <button class="btn btn-sm btn-outline-dark teacher-filter-btn" data-filter="personal">Personal</button>
+                        <button class="btn btn-sm btn-outline-dark teacher-filter-btn" data-filter="distribution">Distribution</button>
+                    </div>
+                </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
     <table class="table table-hover align-middle mb-0">
@@ -423,7 +421,7 @@
                 }
             ?>
 
-            <tr class="borrow-row-teacher">
+            <tr class="borrow-row-teacher" data-origin="<?php echo e($borrow->origin ?? 'personal'); ?>">
                 <td>
                     <input type="checkbox" class="borrow-checkbox-teacher form-check-input" data-borrow-id="<?php echo e($borrow->id); ?>" data-quantity="<?php echo e($quantity); ?>" aria-label="Select this transaction">
                 </td>
@@ -760,6 +758,120 @@
                 });
             });
 
+            // Tab-specific filtering
+            const studentFilterBtns = document.querySelectorAll('.student-filter-btn');
+            const teacherFilterBtns = document.querySelectorAll('.teacher-filter-btn');
+            const studentSearchInput = document.querySelector('.student-search');
+            const teacherSearchInput = document.querySelector('.teacher-search');
+            let studentFilter = 'all';
+            let teacherFilter = 'all';
+            let studentQuery = '';
+            let teacherQuery = '';
+
+            const rowSearchCache = new WeakMap();
+
+            const normalizeSearchText = (value) => {
+                return (value ?? '')
+                    .toString()
+                    .toLowerCase()
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            };
+
+            const getRowSearchText = (row) => {
+                if (rowSearchCache.has(row)) return rowSearchCache.get(row);
+
+                let text = row?.textContent ?? '';
+
+                // Include control numbers from the modal (when a transaction has multiple copies).
+                const modalTrigger = row?.querySelector('[data-bs-target^="#ctrlModal_"]');
+                const modalSelector = modalTrigger?.getAttribute('data-bs-target');
+                if (modalSelector) {
+                    const modal = document.querySelector(modalSelector);
+                    if (modal) {
+                        text += ' ' + (modal.textContent ?? '');
+                    }
+                }
+
+                const normalized = normalizeSearchText(text);
+                rowSearchCache.set(row, normalized);
+                return normalized;
+            };
+
+            const debounce = (fn, delayMs = 100) => {
+                let timeoutId = null;
+                return (...args) => {
+                    if (timeoutId) clearTimeout(timeoutId);
+                    timeoutId = setTimeout(() => fn(...args), delayMs);
+                };
+            };
+
+            const applyStudentRowVisibility = () => {
+                const term = normalizeSearchText(studentQuery);
+                const studentRows = document.querySelectorAll('#student-returns tr.borrow-row');
+
+                studentRows.forEach(row => {
+                    const origin = row.dataset.origin || 'personal';
+                    const matchesOrigin = (studentFilter === 'all' || studentFilter === origin);
+                    const matchesSearch = (!term || getRowSearchText(row).includes(term));
+                    row.style.display = (matchesOrigin && matchesSearch) ? '' : 'none';
+                });
+            };
+
+            const applyTeacherRowVisibility = () => {
+                const term = normalizeSearchText(teacherQuery);
+                const teacherRows = document.querySelectorAll('#teacher-returns tr.borrow-row-teacher');
+
+                teacherRows.forEach(row => {
+                    const origin = row.dataset.origin || 'personal';
+                    const matchesOrigin = (teacherFilter === 'all' || teacherFilter === origin);
+                    const matchesSearch = (!term || getRowSearchText(row).includes(term));
+                    row.style.display = (matchesOrigin && matchesSearch) ? '' : 'none';
+                });
+            };
+            
+            // Student filters
+            studentFilterBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    studentFilter = this.dataset.filter;
+                    
+                    studentFilterBtns.forEach(b => {
+                        b.classList.toggle('btn-primary', b.dataset.filter === studentFilter);
+                        b.classList.toggle('btn-outline-dark', b.dataset.filter !== studentFilter);
+                    });
+
+                    applyStudentRowVisibility();
+                });
+            });
+            
+            // Teacher filters
+            teacherFilterBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    teacherFilter = this.dataset.filter;
+                    
+                    teacherFilterBtns.forEach(b => {
+                        b.classList.toggle('btn-primary', b.dataset.filter === teacherFilter);
+                        b.classList.toggle('btn-outline-dark', b.dataset.filter !== teacherFilter);
+                    });
+
+                    applyTeacherRowVisibility();
+                });
+            });
+
+            // Search bars (per tab)
+            const onStudentSearch = debounce(() => {
+                studentQuery = studentSearchInput?.value ?? '';
+                applyStudentRowVisibility();
+            }, 80);
+
+            const onTeacherSearch = debounce(() => {
+                teacherQuery = teacherSearchInput?.value ?? '';
+                applyTeacherRowVisibility();
+            }, 80);
+
+            studentSearchInput?.addEventListener('input', onStudentSearch);
+            teacherSearchInput?.addEventListener('input', onTeacherSearch);
+
             // Sync remarks for single form submissions
             document.querySelectorAll('.return-form').forEach(form => {
                 form.addEventListener('submit', function(e) {
@@ -852,4 +964,5 @@
     </script>
 </div>
 <?php $__env->stopSection(); ?>
+
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\user\Herd\library\resources\views/borrow/return.blade.php ENDPATH**/ ?>
