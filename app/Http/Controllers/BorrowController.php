@@ -380,8 +380,11 @@ class BorrowController extends Controller
                     'type' => $borrow->remark === 'Lost' ? 'lost' : 'damaged',
                     'copy_number' => $borrow->copy_number ?? 'BK-' . $borrow->book_id,
                     'remarks' => $borrow->notes,
+                    'borrowed_at' => $borrow->borrowed_at,
                     'due_date' => $borrow->due_date,
                     'status' => 'active',
+                    'role' => $borrow->role,
+                    'origin' => $borrow->origin,
                 ]);
             }
 

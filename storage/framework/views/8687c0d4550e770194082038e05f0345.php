@@ -1,31 +1,33 @@
-@extends('layouts.app')
 
-@section('content')
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
-    {{-- Header Section --}}
+    
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
             <h4 class="mb-0">Return Borrowed Books</h4>
         </div>
     </div>
 
-    {{-- Success Notification --}}
-    @if(session('success'))
+    
+    <?php if(session('success')): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
+            <?php echo e(session('success')); ?>
+
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-    @endif
+    <?php endif; ?>
 
-    {{-- Error Notification --}}
-    @if(session('error'))
+    
+    <?php if(session('error')): ?>
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
+            <?php echo e(session('error')); ?>
+
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-    @endif
+    <?php endif; ?>
 
-    {{-- Search and Filter Form --}}
+    
     <div class="mb-4 p-3 bg-light rounded border">
         <div class="row g-2 mb-3">
             <div class="col-md-6">
@@ -39,7 +41,7 @@
                 </div>
             </div>
             <div class="col-md-3 d-flex gap-2">
-                <a href="{{ route('borrow.receipt.all') }}" target="_blank" class="btn btn-outline-dark" style="white-space: nowrap; text-decoration: none;"><i class="bi bi-printer me-1"></i>Print All</a>
+                <a href="<?php echo e(route('borrow.receipt.all')); ?>" target="_blank" class="btn btn-outline-dark" style="white-space: nowrap; text-decoration: none;"><i class="bi bi-printer me-1"></i>Print All</a>
             </div>
         </div>
     </div>
@@ -77,7 +79,7 @@
         }
     </style>
 
-    {{-- Tabs for Student/Teacher Returns --}}
+    
     <ul class="nav nav-tabs mb-4" id="returnTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active" id="student-return-tab" data-bs-toggle="tab" data-bs-target="#student-returns" type="button" role="tab" aria-controls="student-returns" aria-selected="true">
@@ -92,7 +94,7 @@
     </ul>
 
     <div class="tab-content" id="returnTabContent">
-        {{-- Student Returns Tab --}}
+        
         <div class="tab-pane fade show active" id="student-returns" role="tabpanel" aria-labelledby="student-return-tab">
             <div class="card shadow-sm">
                 <div class="card-header">
@@ -118,7 +120,7 @@
             </tr>
         </thead>
         <tbody>
-        @php
+        <?php
             // Separate student and teacher borrows
             // Include NULL roles as students (for legacy borrow records)
             $studentBorrows = $borrows->filter(function($borrow) {
@@ -141,10 +143,10 @@
             });
             
             $grouped = $groupedStudents;
-        @endphp
+        ?>
         
-        @forelse($grouped as $transaction)
-            @php
+        <?php $__empty_1 = true; $__currentLoopData = $grouped; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $transaction): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+            <?php
                 // Only show unreturned borrows in this transaction
                 $unreturned = $transaction['borrows']->whereNull('returned_at');
                 $borrow = $unreturned->first();
@@ -190,24 +192,25 @@
                 } else {
                     $badgeClass = 'bg-success';
                 }
-            @endphp
+            ?>
 
             <tr class="borrow-row">
                 <td>
-                    <input type="checkbox" class="borrow-checkbox form-check-input" data-borrow-id="{{ $borrow->id }}" data-quantity="{{ $quantity }}" aria-label="Select this transaction">
+                    <input type="checkbox" class="borrow-checkbox form-check-input" data-borrow-id="<?php echo e($borrow->id); ?>" data-quantity="<?php echo e($quantity); ?>" aria-label="Select this transaction">
                 </td>
                 <td>
-                    @php
+                    <?php
                         $borrower = \App\Models\User::find($borrow->user_id);
-                    @endphp
-                    @if($borrower)
-                        {{ $borrower->name ?? (($borrower->first_name ?? 'Unknown') . ' ' . ($borrower->last_name ?? '')) }}
-                    @else
+                    ?>
+                    <?php if($borrower): ?>
+                        <?php echo e($borrower->name ?? (($borrower->first_name ?? 'Unknown') . ' ' . ($borrower->last_name ?? ''))); ?>
+
+                    <?php else: ?>
                         Unknown
-                    @endif
+                    <?php endif; ?>
                 </td>
                 <td>
-                    @php
+                    <?php
                         $bookTitle = 'Book not found';
                         $bookSource = '';
             
@@ -221,32 +224,33 @@
                                 $bookSource = 'Distribution';
                             }
                         }
-                    @endphp
-                    {{ $bookTitle }}
-                </td>
-                <td class="d-none d-lg-table-cell"><small>{{ $bookSource }}</small></td>
-                <td class="d-none d-md-table-cell"><small>{{ $borrowedAt ? $borrowedAt->format('Y-m-d') : 'N/A' }}</small></td>
-                <td class="d-none d-lg-table-cell"><small>{{ $dueDate ? $dueDate->format('Y-m-d') : 'N/A' }}</small></td>
+                    ?>
+                    <?php echo e($bookTitle); ?>
 
-                {{-- Control # column --}}
+                </td>
+                <td class="d-none d-lg-table-cell"><small><?php echo e($bookSource); ?></small></td>
+                <td class="d-none d-md-table-cell"><small><?php echo e($borrowedAt ? $borrowedAt->format('Y-m-d') : 'N/A'); ?></small></td>
+                <td class="d-none d-lg-table-cell"><small><?php echo e($dueDate ? $dueDate->format('Y-m-d') : 'N/A'); ?></small></td>
+
+                
                 <td>
-                    @if($quantity > 1)
-                    <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#ctrlModal_{{ $borrow->id }}">
-                        <i class="bi bi-list-check me-1"></i>Show ({{ $quantity }})
+                    <?php if($quantity > 1): ?>
+                    <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#ctrlModal_<?php echo e($borrow->id); ?>">
+                        <i class="bi bi-list-check me-1"></i>Show (<?php echo e($quantity); ?>)
                     </button>
-                    @else
-                    {{-- For single copy, show control number directly --}}
-                    @if($borrow->copy_number)
-                        <span class="text-black"><span style="font-family: monospace;">Ctrl#: {{ $borrow->copy_number }}</span></span>
-                    @else
+                    <?php else: ?>
+                    
+                    <?php if($borrow->copy_number): ?>
+                        <span class="text-black"><span style="font-family: monospace;">Ctrl#: <?php echo e($borrow->copy_number); ?></span></span>
+                    <?php else: ?>
                         <span class="text-muted">N/A</span>
-                    @endif
-                    @endif
+                    <?php endif; ?>
+                    <?php endif; ?>
                 </td>
 
-                {{-- Status & Remarks --}}
+                
                 <td>
-                    @php
+                    <?php
                         $statusClass = 'text-success';
                         $statusText = 'On Time';
                         
@@ -254,50 +258,50 @@
                             $statusClass = 'text-danger';
                             $statusText = 'Overdue';
                         }
-                    @endphp
-                    <span class="{{ $statusClass }} fw-semibold">{{ $statusText }}</span>
+                    ?>
+                    <span class="<?php echo e($statusClass); ?> fw-semibold"><?php echo e($statusText); ?></span>
                 </td>
 
-                {{-- Remarks Column --}}
+                
                 <td>
-                    @php $selected = old('remark', $borrow->remark ?? ''); @endphp
+                    <?php $selected = old('remark', $borrow->remark ?? ''); ?>
                     <select name="remark" class="form-select form-select-sm remark-select" aria-label="Set remark">
-                        <option value="No Remarks" {{ $selected === 'No Remarks' ? 'selected' : '' }}>No Remarks</option>
-                        <option value="On Time" {{ $selected === 'On Time' ? 'selected' : '' }}>On Time</option>
-                        <option value="Late Return" {{ $selected === 'Late Return' ? 'selected' : '' }}>Late Return</option>
-                        <option value="Lost" {{ $selected === 'Lost' ? 'selected' : '' }}>Lost</option>
-                        <option value="Damage" {{ $selected === 'Damage' ? 'selected' : '' }}>Damage</option>
+                        <option value="No Remarks" <?php echo e($selected === 'No Remarks' ? 'selected' : ''); ?>>No Remarks</option>
+                        <option value="On Time" <?php echo e($selected === 'On Time' ? 'selected' : ''); ?>>On Time</option>
+                        <option value="Late Return" <?php echo e($selected === 'Late Return' ? 'selected' : ''); ?>>Late Return</option>
+                        <option value="Lost" <?php echo e($selected === 'Lost' ? 'selected' : ''); ?>>Lost</option>
+                        <option value="Damage" <?php echo e($selected === 'Damage' ? 'selected' : ''); ?>>Damage</option>
                     </select>
                 </td>
 
-                {{-- Actions --}}
+                
                 <td class="text-center">
-                    <form action="{{ route('borrow.return.process', $borrow->id) }}" method="POST" class="d-flex gap-1 justify-content-center flex-wrap return-form" data-quantity="{{ $quantity }}">
-                        @csrf
+                    <form action="<?php echo e(route('borrow.return.process', $borrow->id)); ?>" method="POST" class="d-flex gap-1 justify-content-center flex-wrap return-form" data-quantity="<?php echo e($quantity); ?>">
+                        <?php echo csrf_field(); ?>
                         
-                        {{-- Hidden checkboxes for form submission (synced with modal) --}}
+                        
                         <div style="display: none;">
-                            @php $ctrlIndex = 0; @endphp
-                            @foreach($unreturned as $b)
-                                <input type="checkbox" class="borrow-id-checkbox" name="borrow_ids[]" value="{{ $b->id }}" checked>
-                                @php $ctrlIndex++; @endphp
-                            @endforeach
+                            <?php $ctrlIndex = 0; ?>
+                            <?php $__currentLoopData = $unreturned; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $b): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <input type="checkbox" class="borrow-id-checkbox" name="borrow_ids[]" value="<?php echo e($b->id); ?>" checked>
+                                <?php $ctrlIndex++; ?>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </div>
                         
-                        {{-- Hidden input for quantity being returned --}}
-                        <input type="hidden" name="quantity_returned" class="quantity-returned-input" value="{{ $quantity }}">
-                        <input type="hidden" name="remark" class="remark-hidden-input" value="{{ $selected }}">
+                        
+                        <input type="hidden" name="quantity_returned" class="quantity-returned-input" value="<?php echo e($quantity); ?>">
+                        <input type="hidden" name="remark" class="remark-hidden-input" value="<?php echo e($selected); ?>">
                         
                         <button type="submit" class="btn btn-sm btn-success return-btn" title="Process return">
                             <i class="bi bi-check-circle me-1"></i>Return
                         </button>
-                        <a href="{{ route('borrow.receipt', $borrow->id) }}" target="_blank" class="btn btn-sm btn-outline-dark" title="Print receipt">
+                        <a href="<?php echo e(route('borrow.receipt', $borrow->id)); ?>" target="_blank" class="btn btn-sm btn-outline-dark" title="Print receipt">
                             <i class="bi bi-printer me-1"></i>Print
                         </a>
                     </form>
                 </td>
             </tr>
-        @empty
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
             <tr>
                 <td colspan="10" class="text-center py-4">
                     <div class="text-muted">
@@ -306,7 +310,7 @@
                     </div>
                 </td>
             </tr>
-        @endforelse
+        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -327,7 +331,7 @@
         </div>
         </div>
 
-        {{-- Teacher Returns Tab --}}
+        
         <div class="tab-pane fade" id="teacher-returns" role="tabpanel" aria-labelledby="teacher-return-tab">
             <div class="card shadow-sm">
                 <div class="card-header">
@@ -353,7 +357,7 @@
             </tr>
         </thead>
         <tbody>
-        @php
+        <?php
             // Group teacher borrows by user_id, book_id, borrowed_at date, AND origin
             $groupedTeachers = $teacherBorrows->groupBy(function($borrow) {
                 $borrowDate = $borrow->borrowed_at ? \Carbon\Carbon::parse($borrow->borrowed_at)->format('Y-m-d') : 'unknown';
@@ -369,10 +373,10 @@
             });
             
             $grouped = $groupedTeachers;
-        @endphp
+        ?>
         
-        @forelse($grouped as $transaction)
-            @php
+        <?php $__empty_1 = true; $__currentLoopData = $grouped; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $transaction): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+            <?php
                 // Only show unreturned borrows in this transaction
                 $unreturned = $transaction['borrows']->whereNull('returned_at');
                 $borrow = $unreturned->first();
@@ -417,21 +421,22 @@
                 } else {
                     $badgeClass = 'bg-success';
                 }
-            @endphp
+            ?>
 
             <tr class="borrow-row-teacher">
                 <td>
-                    <input type="checkbox" class="borrow-checkbox-teacher form-check-input" data-borrow-id="{{ $borrow->id }}" data-quantity="{{ $quantity }}" aria-label="Select this transaction">
+                    <input type="checkbox" class="borrow-checkbox-teacher form-check-input" data-borrow-id="<?php echo e($borrow->id); ?>" data-quantity="<?php echo e($quantity); ?>" aria-label="Select this transaction">
                 </td>
                 <td>
-                    @if($teacher)
-                        {{ $teacher->name ?? 'Unknown' }}
-                    @else
+                    <?php if($teacher): ?>
+                        <?php echo e($teacher->name ?? 'Unknown'); ?>
+
+                    <?php else: ?>
                         Unknown
-                    @endif
+                    <?php endif; ?>
                 </td>
                 <td>
-                    @php
+                    <?php
                         $bookTitle = 'Book not found';
                         $bookSource = '';
             
@@ -445,81 +450,82 @@
                                 $bookSource = 'Distribution';
                             }
                         }
-                    @endphp
-                    {{ $bookTitle }}
-                </td>
-                <td class="d-none d-lg-table-cell"><small>{{ $bookSource }}</small></td>
-                <td class="d-none d-md-table-cell"><small>{{ $borrowedAt ? $borrowedAt->format('Y-m-d') : 'N/A' }}</small></td>
-                <td class="d-none d-lg-table-cell"><small>{{ $dueDate ? $dueDate->format('Y-m-d') : 'N/A' }}</small></td>
+                    ?>
+                    <?php echo e($bookTitle); ?>
 
-                {{-- Control # column --}}
+                </td>
+                <td class="d-none d-lg-table-cell"><small><?php echo e($bookSource); ?></small></td>
+                <td class="d-none d-md-table-cell"><small><?php echo e($borrowedAt ? $borrowedAt->format('Y-m-d') : 'N/A'); ?></small></td>
+                <td class="d-none d-lg-table-cell"><small><?php echo e($dueDate ? $dueDate->format('Y-m-d') : 'N/A'); ?></small></td>
+
+                
                 <td>
-                    @if($quantity > 1)
-                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#ctrlModal_{{ $borrow->id }}">
-                            View ({{ $quantity }})
+                    <?php if($quantity > 1): ?>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#ctrlModal_<?php echo e($borrow->id); ?>">
+                            View (<?php echo e($quantity); ?>)
                         </button>
-                    @else
-                        <span class="badge bg-light text-dark">{{ $borrow->copy_number ?? 'N/A' }}</span>
-                    @endif
+                    <?php else: ?>
+                        <span class="badge bg-light text-dark"><?php echo e($borrow->copy_number ?? 'N/A'); ?></span>
+                    <?php endif; ?>
                 </td>
 
-                {{-- Status & Remarks --}}
+                
                 <td>
-                    <span class="badge {{ $badgeClass }}">
-                        @if(str_contains(strtolower($remark), 'overdue'))
+                    <span class="badge <?php echo e($badgeClass); ?>">
+                        <?php if(str_contains(strtolower($remark), 'overdue')): ?>
                             Overdue
-                        @elseif($remark === 'Lost')
+                        <?php elseif($remark === 'Lost'): ?>
                             Lost
-                        @elseif($remark === 'Damage')
+                        <?php elseif($remark === 'Damage'): ?>
                             Damaged
-                        @else
+                        <?php else: ?>
                             Normal
-                        @endif
+                        <?php endif; ?>
                     </span>
                 </td>
 
-                {{-- Remarks Column --}}
+                
                 <td>
-                    <span class="text-muted small">{{ $remark }}</span>
+                    <span class="text-muted small"><?php echo e($remark); ?></span>
                 </td>
 
-                {{-- Actions --}}
+                
                 <td class="text-center">
-                    <form action="{{ route('borrow.return.process', $borrow->id) }}" method="POST" class="d-flex gap-1 justify-content-center flex-wrap return-form" data-quantity="{{ $quantity }}">
-                        @csrf
+                    <form action="<?php echo e(route('borrow.return.process', $borrow->id)); ?>" method="POST" class="d-flex gap-1 justify-content-center flex-wrap return-form" data-quantity="<?php echo e($quantity); ?>">
+                        <?php echo csrf_field(); ?>
                         
-                        {{-- Hidden checkboxes for form submission (synced with modal) --}}
+                        
                         <div style="display: none;">
-                            @php $ctrlIndex = 0; @endphp
-                            @foreach($unreturned as $b)
-                                <input type="checkbox" class="borrow-id-checkbox" name="borrow_ids[]" value="{{ $b->id }}" checked>
-                                @php $ctrlIndex++; @endphp
-                            @endforeach
+                            <?php $ctrlIndex = 0; ?>
+                            <?php $__currentLoopData = $unreturned; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $b): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <input type="checkbox" class="borrow-id-checkbox" name="borrow_ids[]" value="<?php echo e($b->id); ?>" checked>
+                                <?php $ctrlIndex++; ?>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </div>
                         
-                        {{-- Hidden input for quantity being returned --}}
-                        <input type="hidden" name="quantity_returned" class="quantity-returned-input" value="{{ $quantity }}">
                         
-                        {{-- Remark selector --}}
-                        @php $selected = old('remark', $borrow->remark ?? ''); @endphp
+                        <input type="hidden" name="quantity_returned" class="quantity-returned-input" value="<?php echo e($quantity); ?>">
+                        
+                        
+                        <?php $selected = old('remark', $borrow->remark ?? ''); ?>
                         <select name="remark" class="form-select form-select-sm remark-select" aria-label="Set remark" style="width: auto;">
-                            <option value="No Remarks" {{ $selected === 'No Remarks' ? 'selected' : '' }}>No Remarks</option>
-                            <option value="On Time" {{ $selected === 'On Time' ? 'selected' : '' }}>On Time</option>
-                            <option value="Late Return" {{ $selected === 'Late Return' ? 'selected' : '' }}>Late Return</option>
-                            <option value="Lost" {{ $selected === 'Lost' ? 'selected' : '' }}>Lost</option>
-                            <option value="Damage" {{ $selected === 'Damage' ? 'selected' : '' }}>Damage</option>
+                            <option value="No Remarks" <?php echo e($selected === 'No Remarks' ? 'selected' : ''); ?>>No Remarks</option>
+                            <option value="On Time" <?php echo e($selected === 'On Time' ? 'selected' : ''); ?>>On Time</option>
+                            <option value="Late Return" <?php echo e($selected === 'Late Return' ? 'selected' : ''); ?>>Late Return</option>
+                            <option value="Lost" <?php echo e($selected === 'Lost' ? 'selected' : ''); ?>>Lost</option>
+                            <option value="Damage" <?php echo e($selected === 'Damage' ? 'selected' : ''); ?>>Damage</option>
                         </select>
                         
                         <button type="submit" class="btn btn-sm btn-success return-btn" title="Process return">
                             <i class="bi bi-check-circle me-1"></i>Return
                         </button>
-                        <a href="{{ route('borrow.receipt', $borrow->id) }}" target="_blank" class="btn btn-sm btn-outline-dark" title="Print receipt">
+                        <a href="<?php echo e(route('borrow.receipt', $borrow->id)); ?>" target="_blank" class="btn btn-sm btn-outline-dark" title="Print receipt">
                             <i class="bi bi-printer me-1"></i>Print
                         </a>
                     </form>
                 </td>
             </tr>
-        @empty
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
             <tr>
                 <td colspan="10" class="text-center py-4">
                     <div class="text-muted">
@@ -528,7 +534,7 @@
                     </div>
                 </td>
             </tr>
-        @endforelse
+        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -549,14 +555,14 @@
         </div>
         </div>
     </div>
-    {{-- Control Numbers Modals for Both Student and Teacher Borrows --}}
-    @php
+    
+    <?php
         // Collect all borrows from both student and teacher collections
         $allBorrows = $borrows->all();
-    @endphp
+    ?>
     
-    @foreach($allBorrows as $borrow)
-        @php
+    <?php $__currentLoopData = $allBorrows; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $borrow): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+        <?php
             // Get the quantity of unreturned borrows with same user, book, and date
             $borrowDate = $borrow->borrowed_at ? \Carbon\Carbon::parse($borrow->borrowed_at)->format('Y-m-d') : 'unknown';
             $similarBorrows = collect($allBorrows)->filter(function($b) use ($borrow, $borrowDate) {
@@ -567,36 +573,36 @@
                     && is_null($b->returned_at);
             });
             $quantity = $similarBorrows->count();
-        @endphp
+        ?>
         
-        @if($quantity > 1)
-        <div class="modal fade" id="ctrlModal_{{ $borrow->id }}" tabindex="-1" aria-labelledby="ctrlModalLabel_{{ $borrow->id }}" aria-hidden="true">
+        <?php if($quantity > 1): ?>
+        <div class="modal fade" id="ctrlModal_<?php echo e($borrow->id); ?>" tabindex="-1" aria-labelledby="ctrlModalLabel_<?php echo e($borrow->id); ?>" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="ctrlModalLabel_{{ $borrow->id }}">
+                        <h5 class="modal-title" id="ctrlModalLabel_<?php echo e($borrow->id); ?>">
                             <i class="bi bi-list-check me-2"></i>Select Control Numbers
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        @foreach($similarBorrows as $b)
-                            @php
+                        <?php $__currentLoopData = $similarBorrows; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $b): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <?php
                                 $ctrlNum = $b->copy_number ?? 'N/A';
-                            @endphp
+                            ?>
                             <div class="card mb-3">
                                 <div class="card-body p-3">
                                     <div class="d-flex align-items-start gap-2 mb-3">
                                         <input class="form-check-input borrow-id-checkbox modal-checkbox mt-1" type="checkbox" 
-                                               name="borrow_ids[]" value="{{ $b->id }}" id="borrow_{{ $b->id }}" checked>
+                                               name="borrow_ids[]" value="<?php echo e($b->id); ?>" id="borrow_<?php echo e($b->id); ?>" checked>
                                         <div class="grow">
-                                            <label for="borrow_{{ $b->id }}" class="form-check-label fw-semibold mb-2 d-block">
-                                                <span class="badge bg-primary">Ctrl#: {{ $ctrlNum }}</span>
+                                            <label for="borrow_<?php echo e($b->id); ?>" class="form-check-label fw-semibold mb-2 d-block">
+                                                <span class="badge bg-primary">Ctrl#: <?php echo e($ctrlNum); ?></span>
                                             </label>
                                         </div>
                                     </div>
                                     <select class="form-select form-select-sm modal-remark-input" 
-                                            data-borrow-id="{{ $b->id }}">
+                                            data-borrow-id="<?php echo e($b->id); ?>">
                                         <option value="No Remarks">No Remarks</option>
                                         <option value="On Time">On Time</option>
                                         <option value="Late Return">Late Return</option>
@@ -605,21 +611,21 @@
                                     </select>
                                 </div>
                             </div>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                             <i class="bi bi-x-circle me-1"></i>Cancel
                         </button>
-                        <button type="button" class="btn btn-primary confirm-modal" data-modal-id="ctrlModal_{{ $borrow->id }}">
+                        <button type="button" class="btn btn-primary confirm-modal" data-modal-id="ctrlModal_<?php echo e($borrow->id); ?>">
                             <i class="bi bi-check-circle me-1"></i>Confirm
                         </button>
                     </div>
                 </div>
             </div>
         </div>
-        @endif
-    @endforeach
+        <?php endif; ?>
+    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -845,4 +851,5 @@
         });
     </script>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\user\Herd\library\resources\views/borrow/return.blade.php ENDPATH**/ ?>

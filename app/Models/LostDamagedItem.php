@@ -20,6 +20,7 @@ class LostDamagedItem extends Model
         'due_date',
         'status',
         'role',
+        'origin',
     ];
 
     protected $casts = [
@@ -28,7 +29,7 @@ class LostDamagedItem extends Model
 
     public function borrow()
     {
-        return $this->belongsTo(Borrow::class, 'borrow_id');
+        return $this->belongsTo(Borrow::class);
     }
 
     public function book()
@@ -38,6 +39,12 @@ class LostDamagedItem extends Model
 
     public function borrower()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        // Intelligently determine if borrower is a Teacher or User
+        // by checking which table contains the user_id
+        $teacher = Teacher::find($this->user_id);
+        if ($teacher) {
+            return $teacher;
+        }
+        return User::find($this->user_id);
     }
 }

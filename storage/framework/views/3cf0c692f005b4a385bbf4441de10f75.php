@@ -1,5 +1,4 @@
-
-@push('styles')
+<?php $__env->startPush('styles'); ?>
 <style>
 @media print {
     /* Prevent page break between header and table */
@@ -24,64 +23,67 @@
     }
 }
 </style>
-@endpush
-@extends('layouts.app')
+<?php $__env->stopPush(); ?>
 
-@section('content')
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid py-4">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <h1 class="h2 mb-0">Students List</h1>
         <div class="d-flex gap-2">
-            <a href="{{ route('users.print', request()->query()) }}" target="_blank" class="btn btn-outline-secondary">
+            <a href="<?php echo e(route('users.print', request()->query())); ?>" target="_blank" class="btn btn-outline-secondary">
                 <i class="bi bi-printer me-2"></i>Print All
             </a>
             <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#importModal">
                 <i class="bi bi-download me-2"></i>Import CSV
             </button>
-            <a href="{{ route('users.create') }}" class="btn btn-success">
+            <a href="<?php echo e(route('users.create')); ?>" class="btn btn-success">
                 <i class="bi bi-plus-circle me-2"></i>Add Student
             </a>
         </div>
     </div>
 
-    @if(session('warning'))
+    <?php if(session('warning')): ?>
         <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            {{ session('warning') }}
+            <?php echo e(session('warning')); ?>
+
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-    @endif
+    <?php endif; ?>
 
-    @if(session('success'))
+    <?php if(session('success')): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
+            <?php echo e(session('success')); ?>
+
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-    @endif
+    <?php endif; ?>
 
-    @if(session('error'))
+    <?php if(session('error')): ?>
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
+            <?php echo e(session('error')); ?>
+
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-    @endif
+    <?php endif; ?>
 
-    {{-- Search Form --}}
-    <form class="row g-3 mb-4" action="{{ route('users.index') }}" method="GET">
+    
+    <form class="row g-3 mb-4" action="<?php echo e(route('users.index')); ?>" method="GET">
         <div class="col-md-3">
-            <input class="form-control" type="search" name="name" value="{{ request('name') }}" placeholder="Search by name..." onchange="this.form.submit()">
+            <input class="form-control" type="search" name="name" value="<?php echo e(request('name')); ?>" placeholder="Search by name..." onchange="this.form.submit()">
         </div>
         <div class="col-md-2">
-            <input class="form-control" type="search" name="strand" value="{{ request('strand') }}" placeholder="Strand (STEM, ABM...)..." onchange="this.form.submit()">
+            <input class="form-control" type="search" name="strand" value="<?php echo e(request('strand')); ?>" placeholder="Strand (STEM, ABM...)..." onchange="this.form.submit()">
         </div>
         <div class="col-md-2">
-            <input class="form-control" type="search" name="lrn" value="{{ request('lrn') }}" placeholder="LRN..." onchange="this.form.submit()">
+            <input class="form-control" type="search" name="lrn" value="<?php echo e(request('lrn')); ?>" placeholder="LRN..." onchange="this.form.submit()">
         </div>
         <div class="col-md-2">
             <select class="form-select" name="grade" onchange="this.form.submit()">
                 <option value="">Year Level</option>
-                @for($i = 7; $i <= 12; $i++)
-                    <option value="{{ $i }}" {{ request('grade') == $i ? 'selected' : '' }}>Grade {{ $i }}</option>
-                @endfor
+                <?php for($i = 7; $i <= 12; $i++): ?>
+                    <option value="<?php echo e($i); ?>" <?php echo e(request('grade') == $i ? 'selected' : ''); ?>>Grade <?php echo e($i); ?></option>
+                <?php endfor; ?>
             </select>
         </div>
         <div class="col-md-3">
@@ -91,7 +93,7 @@
         </div>
     </form>
 
-{{-- Import Modal --}}
+
 <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -99,8 +101,8 @@
                 <h5 class="modal-title" id="importModalLabel">Import Students</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('users.import') }}" method="POST" enctype="multipart/form-data">
-                @csrf
+            <form action="<?php echo e(route('users.import')); ?>" method="POST" enctype="multipart/form-data">
+                <?php echo csrf_field(); ?>
                 <div class="modal-body">
                     <div class="alert alert-info">
                         <strong>CSV Format:</strong> Upload a CSV file with the following columns in order:
@@ -135,8 +137,8 @@
     <div class="card-body p-0">
         <div id="debugState" style="font-size:12px;color:#b00;background:#fffbe6;padding:4px 8px;margin-bottom:4px;display:none"></div>
         <div class="table-responsive">
-            <form id="bulkDeleteForm" action="{{ route('users.bulkDelete') }}" method="POST">
-                @csrf
+            <form id="bulkDeleteForm" action="<?php echo e(route('users.bulkDelete')); ?>" method="POST">
+                <?php echo csrf_field(); ?>
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
@@ -161,8 +163,8 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($users as $user)
-                        @php
+                    <?php $__empty_1 = true; $__currentLoopData = $users; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $user): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                        <?php
                             $activeBorrows = $user->borrows->whereNull('returned_at');
                             $totalOverdue = 0;
                             $today = \Carbon\Carbon::today();
@@ -178,18 +180,18 @@
                             } else {
                                 $displayName = '-';
                             }
-                        @endphp
+                        ?>
 
                         <tr>
                             <td>
-                                <label class="form-check-label" for="userCheckbox{{ $user->id }}">
-                                    <input type="checkbox" class="form-check-input user-checkbox" id="userCheckbox{{ $user->id }}" data-user-id="{{ $user->id }}" aria-label="Select student {{ $displayName }}">
+                                <label class="form-check-label" for="userCheckbox<?php echo e($user->id); ?>">
+                                    <input type="checkbox" class="form-check-input user-checkbox" id="userCheckbox<?php echo e($user->id); ?>" data-user-id="<?php echo e($user->id); ?>" aria-label="Select student <?php echo e($displayName); ?>">
                                 </label>
                             </td>
                             <td>
-                                <div class="fw-semibold">{{ $displayName }}</div>
+                                <div class="fw-semibold"><?php echo e($displayName); ?></div>
                             </td>
-                            @php
+                            <?php
                                 // derive grade, section, and strand robustly from available fields
                                 $gradeDisplay = '-';
                                 $sectionDisplay = '-';
@@ -248,48 +250,49 @@
                                 $gradeDisplay = $gradeDisplay ?: '-';
                                 $sectionDisplay = $sectionDisplay ?: '-';
                                 $strandDisplay = $strandDisplay ?: '-';
-                            @endphp
+                            ?>
                             <td>
-                                <span class="badge bg-secondary">{{ $gradeDisplay }}</span>
+                                <span class="badge bg-secondary"><?php echo e($gradeDisplay); ?></span>
                             </td>
                             <td>
-                                <span class="text-muted small">{{ $sectionDisplay }}</span>
+                                <span class="text-muted small"><?php echo e($sectionDisplay); ?></span>
                             </td>
                             <td>
-                                <small class="text-muted">{{ $strandDisplay }}</small>
+                                <small class="text-muted"><?php echo e($strandDisplay); ?></small>
                             </td>
                             <td class="d-none d-lg-table-cell">
-                                <small>{{ $user->lrn ?? '-' }}</small>
+                                <small><?php echo e($user->lrn ?? '-'); ?></small>
                             </td>
                             <td class="d-none d-lg-table-cell">
-                                <small>{{ $user->phone_number ?? '-' }}</small>
+                                <small><?php echo e($user->phone_number ?? '-'); ?></small>
                             </td>
                             <td class="d-none d-xl-table-cell">
-                                <small>{{ Str::limit($user->address, 25) ?? '-' }}</small>
+                                <small><?php echo e(Str::limit($user->address, 25) ?? '-'); ?></small>
                             </td>
                             <td>
-                                @if($activeBorrows->count() > 0)
+                                <?php if($activeBorrows->count() > 0): ?>
                                     <div class="d-flex flex-wrap gap-1">
-                                        <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#borrowedBooksModal{{ $user->id }}">
+                                        <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#borrowedBooksModal<?php echo e($user->id); ?>">
                                             <i class="bi bi-book"></i>
                                         </button>
-                                        <small class="text-muted">{{ $activeBorrows->count() }} book(s)</small>
+                                        <small class="text-muted"><?php echo e($activeBorrows->count()); ?> book(s)</small>
                                     </div>
 
-                                    {{-- Borrowed Books Modal --}}
-                                    <div class="modal fade" id="borrowedBooksModal{{ $user->id }}" tabindex="-1" aria-labelledby="borrowedBooksModalLabel{{ $user->id }}" aria-hidden="true">
+                                    
+                                    <div class="modal fade" id="borrowedBooksModal<?php echo e($user->id); ?>" tabindex="-1" aria-labelledby="borrowedBooksModalLabel<?php echo e($user->id); ?>" aria-hidden="true">
                                         <div class="modal-dialog modal-lg">
                                             <div class="modal-content">
                                                 <div class="modal-header">
-                                                    <h5 class="modal-title" id="borrowedBooksModalLabel{{ $user->id }}">
-                                                        <i class="bi bi-book me-2"></i>Books Borrowed by {{ $user->first_name }} {{ $user->last_name }}
+                                                    <h5 class="modal-title" id="borrowedBooksModalLabel<?php echo e($user->id); ?>">
+                                                        <i class="bi bi-book me-2"></i>Books Borrowed by <?php echo e($user->first_name); ?> <?php echo e($user->last_name); ?>
+
                                                     </h5>
                                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                 </div>
                                                 <div class="modal-body">
                                                     <div class="row g-3">
-                                                        @foreach($activeBorrows as $borrow)
-                                                            @php
+                                                        <?php $__currentLoopData = $activeBorrows; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $borrow): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                            <?php
                                                                 $borrowDate = $borrow->borrowed_at;
                                                                 $dueDate    = $borrow->due_date;
 
@@ -327,25 +330,27 @@
                                                                     $liClass = '';
                                                                     $itemBadgeClass = (strtolower($itemRemark) === 'on time') ? 'bg-success' : 'bg-secondary';
                                                                 }
-                                                            @endphp
+                                                            ?>
                                                             <div class="col-md-6 mb-3">
-                                                                <div class="card h-100 {{ $liClass }}">
+                                                                <div class="card h-100 <?php echo e($liClass); ?>">
                                                                     <div class="card-body">
-                                                                        <h6 class="card-title">{{ $borrow->book->title ?? 'Book not found' }}</h6>
+                                                                        <h6 class="card-title"><?php echo e($borrow->book->title ?? 'Book not found'); ?></h6>
                                                                         <p class="card-text small mb-2">
-                                                                            <strong>Borrowed:</strong> {{ $borrowDate ? $borrowDate->format('M d, Y') : '-' }}<br>
-                                                                            <strong>Due:</strong> {{ $dueDate ? $dueDate->format('M d, Y') : '-' }}
+                                                                            <strong>Borrowed:</strong> <?php echo e($borrowDate ? $borrowDate->format('M d, Y') : '-'); ?><br>
+                                                                            <strong>Due:</strong> <?php echo e($dueDate ? $dueDate->format('M d, Y') : '-'); ?>
+
                                                                         </p>
-                                                                        <span class="badge {{ $itemBadgeClass }}">{{ $itemRemark }}</span>
-                                                                        @if($borrow->returned_at && !empty($borrow->notes))
+                                                                        <span class="badge <?php echo e($itemBadgeClass); ?>"><?php echo e($itemRemark); ?></span>
+                                                                        <?php if($borrow->returned_at && !empty($borrow->notes)): ?>
                                                                             <p class="card-text small mt-2 mb-0">
-                                                                                <strong>Notes:</strong> {{ $borrow->notes }}
+                                                                                <strong>Notes:</strong> <?php echo e($borrow->notes); ?>
+
                                                                             </p>
-                                                                        @endif
+                                                                        <?php endif; ?>
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                        @endforeach
+                                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">
@@ -354,26 +359,27 @@
                                             </div>
                                         </div>
                                     </div>
-                                @else
+                                <?php else: ?>
                                     <span class="text-muted">-</span>
-                                @endif
+                                <?php endif; ?>
                             </td>
 
                             <td>
-                                @php
+                                <?php
                                     $displayRemark = $user->remark;
                                     if (!$displayRemark) {
                                         $displayRemark = $totalOverdue > 0 ? "{$totalOverdue} day(s) overdue" : 'Good Standing';
                                     }
-                                @endphp
+                                ?>
 
-                                <span class="badge @if($totalOverdue > 0 && !$user->remark) bg-danger @elseif(in_array($user->remark, ['Cleared', 'Good Standing'])) bg-success @elseif($user->remark == 'Not Cleared') bg-danger @else bg-success @endif">
-                                    {{ $displayRemark }}
+                                <span class="badge <?php if($totalOverdue > 0 && !$user->remark): ?> bg-danger <?php elseif(in_array($user->remark, ['Cleared', 'Good Standing'])): ?> bg-success <?php elseif($user->remark == 'Not Cleared'): ?> bg-danger <?php else: ?> bg-success <?php endif; ?>">
+                                    <?php echo e($displayRemark); ?>
+
                                 </span>
                             </td>
 
                             <td class="d-none d-xl-table-cell">
-                                @php
+                                <?php
                                     // Get recent notes from returned books (last 30 days)
                                     $recentReturns = $user->borrows->whereNotNull('returned_at')
                                         ->where('returned_at', '>=', \Carbon\Carbon::now()->subDays(30))
@@ -381,33 +387,33 @@
                                         ->where('notes', '!=', '')
                                         ->sortByDesc('returned_at')
                                         ->take(1); // Show last 1 note
-                                @endphp
+                                ?>
 
-                                @if($recentReturns->count() > 0)
+                                <?php if($recentReturns->count() > 0): ?>
                                     <div>
-                                        @foreach($recentReturns as $return)
+                                        <?php $__currentLoopData = $recentReturns; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $return): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                             <div class="small text-muted">
-                                                <em>{{ Str::limit($return->notes, 40) }}</em>
-                                                <br><small>{{ $return->returned_at->format('M j') }}</small>
+                                                <em><?php echo e(Str::limit($return->notes, 40)); ?></em>
+                                                <br><small><?php echo e($return->returned_at->format('M j')); ?></small>
                                             </div>
-                                        @endforeach
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                     </div>
-                                @else
+                                <?php else: ?>
                                     <span class="text-muted">-</span>
-                                @endif
+                                <?php endif; ?>
                             </td>
 
                             <td class="text-center">
                                 <div class="btn-group" role="group">
-                                    <a href="{{ route('users.show', $user) }}" class="btn btn-sm btn-outline-dark" title="View">
+                                    <a href="<?php echo e(route('users.show', $user)); ?>" class="btn btn-sm btn-outline-dark" title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <a href="{{ route('users.edit', $user) }}" class="btn btn-sm btn-outline-dark" title="Edit">
+                                    <a href="<?php echo e(route('users.edit', $user)); ?>" class="btn btn-sm btn-outline-dark" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    <form action="{{ route('users.destroy', $user) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this student?');">
-                                        @csrf
-                                        @method('DELETE')
+                                    <form action="<?php echo e(route('users.destroy', $user)); ?>" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this student?');">
+                                        <?php echo csrf_field(); ?>
+                                        <?php echo method_field('DELETE'); ?>
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -415,7 +421,7 @@
                                 </div>
                             </td>
                         </tr>
-                    @empty
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <tr>
                             <td colspan="11" class="text-center py-4">
                                 <div class="text-muted">
@@ -424,7 +430,7 @@
                                 </div>
                             </td>
                         </tr>
-                    @endforelse
+                    <?php endif; ?>
                 </tbody>
             </table>
 
@@ -437,7 +443,8 @@
                         </button>
                     </div>
                     <div>
-                        {{ $users->withQueryString()->links('pagination::bootstrap-5') }}
+                        <?php echo e($users->withQueryString()->links('pagination::bootstrap-5')); ?>
+
                     </div>
                     <div>
                         <button type="submit" id="deleteSelectedUsersBtnBottom" class="btn btn-outline-danger d-none">
@@ -452,9 +459,9 @@
         </div>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -597,5 +604,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
 
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\user\Herd\library\resources\views/users/index.blade.php ENDPATH**/ ?>

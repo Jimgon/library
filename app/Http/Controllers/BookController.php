@@ -918,13 +918,13 @@ class BookController extends Controller
 
         // Get all active records for counting
         $allRecords = LostDamagedItem::where('status', 'active')
-            ->with(['borrow.user', 'book', 'borrower'])
+            ->with(['borrow', 'book'])
             ->orderBy('created_at', 'desc')
             ->get();
 
         // Build filtered records query
         $query = LostDamagedItem::where('status', 'active')
-            ->with(['borrow.user', 'book', 'borrower']);
+            ->with(['borrow', 'book']);
 
         // Apply type filter
         if ($filterType && in_array($filterType, ['lost', 'damaged'])) {
@@ -944,38 +944,42 @@ class BookController extends Controller
                 $borrower_name = 'Unknown';
                 $borrower_lrn = 'N/A';
                 
-                // First priority: borrow.user (student)
-                if ($record->borrow && $record->borrow->user) {
-                    $user = $record->borrow->user;
-                    $borrower_name = $user->name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?? 'Unknown';
-                    $borrower_lrn = $user->lrn ?? 'N/A';
+                // First priority: Use borrow relationship with role check
+                if ($record->borrow) {
+                    if ($record->borrow->role === 'teacher') {
+                        $teacher = \App\Models\Teacher::find($record->user_id);
+                        if ($teacher) {
+                            $borrower_name = $teacher->name ?? 'Unknown';
+                            $borrower_lrn = 'N/A';
+                        }
+                    } else {
+                        $user = \App\Models\User::find($record->user_id);
+                        if ($user) {
+                            $borrower_name = $user->name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?? 'Unknown';
+                            $borrower_lrn = $user->lrn ?? 'N/A';
+                        }
+                    }
                 }
                 // Fallback: Query user directly using user_id from lost_damaged_items
-                elseif ($record->user_id) {
-                    $user = \App\Models\User::find($record->user_id);
-                    if ($user) {
-                        $borrower_name = $user->name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?? 'Unknown';
-                        $borrower_lrn = $user->lrn ?? 'N/A';
+                elseif ($borrower_name === 'Unknown' && $record->user_id) {
+                    if ($record->role === 'teacher') {
+                        $teacher = \App\Models\Teacher::find($record->user_id);
+                        if ($teacher) {
+                            $borrower_name = $teacher->name ?? 'Unknown';
+                        }
+                    } else {
+                        $user = \App\Models\User::find($record->user_id);
+                        if ($user) {
+                            $borrower_name = $user->name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?? 'Unknown';
+                            $borrower_lrn = $user->lrn ?? 'N/A';
+                        }
                     }
-                }
-                // Second priority: Teacher (if borrow has role=teacher)
-                if ($borrower_name === 'Unknown' && $record->borrow && $record->borrow->role === 'teacher') {
-                    $teacher = \App\Models\Teacher::find($record->user_id);
-                    if ($teacher && $teacher->name) {
-                        $borrower_name = $teacher->name;
-                        $borrower_lrn = 'N/A';
-                    }
-                }
-                // Third priority: Direct borrower relationship  
-                if ($borrower_name === 'Unknown' && $record->borrower && $record->borrower->name) {
-                    $borrower_name = $record->borrower->name ?? trim(($record->borrower->first_name ?? '') . ' ' . ($record->borrower->last_name ?? '')) ?? 'Unknown';
-                    $borrower_lrn = $record->borrower->lrn ?? 'N/A';
                 }
                 
                 $record->borrower_name = $borrower_name;
                 $record->borrower_lrn = $borrower_lrn;
                 return $record;
-            });
+    });
 
         // Apply borrower search filter after enrichment
         if ($borrowerSearch) {
@@ -1007,7 +1011,7 @@ class BookController extends Controller
 
         // Get history logs (non-active records)
         $history = LostDamagedItem::where('status', '!=', 'active')
-            ->with(['borrow.user', 'book', 'borrower'])
+            ->with(['borrow', 'book'])
             ->orderBy('created_at', 'desc')
             ->limit(50)
             ->get()
@@ -1015,28 +1019,17 @@ class BookController extends Controller
                 // Determine borrower name - check all possible sources
                 $borrower_name = 'Unknown';
                 
-                // First priority: borrow.user (student)
-                if ($item->borrow && $item->borrow->user) {
-                    $user = $item->borrow->user;
-                    $borrower_name = $user->name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?? 'Unknown';
-                }
-                // Fallback: Query user directly using user_id from lost_damaged_items
-                elseif ($item->user_id) {
-                    $user = \App\Models\User::find($item->user_id);
-                    if ($user) {
-                        $borrower_name = $user->name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?? 'Unknown';
-                    }
-                }
-                // Second priority: Teacher (if borrow has role=teacher)
-                if ($borrower_name === 'Unknown' && $item->borrow && $item->borrow->role === 'teacher') {
+                // First priority: Use role to determine which model to query
+                if ($item->borrow && $item->borrow->role === 'teacher') {
                     $teacher = \App\Models\Teacher::find($item->user_id);
                     if ($teacher && $teacher->name) {
                         $borrower_name = $teacher->name;
                     }
-                }
-                // Third priority: Direct borrower relationship
-                if ($borrower_name === 'Unknown' && $item->borrower && $item->borrower->name) {
-                    $borrower_name = $item->borrower->name ?? trim(($item->borrower->first_name ?? '') . ' ' . ($item->borrower->last_name ?? '')) ?? 'Unknown';
+                } else {
+                    $user = \App\Models\User::find($item->user_id);
+                    if ($user) {
+                        $borrower_name = $user->name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?? 'Unknown';
+                    }
                 }
                 
                 return (object) [

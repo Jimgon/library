@@ -20,6 +20,7 @@ class Borrow extends Model
         'role',
         'origin',
         'copy_number',
+        'status',
     ];
 
     protected $casts = [
