@@ -588,13 +588,59 @@ class BookController extends Controller
     {
         $book->load('borrows.user');
         
-        // Return JSON if requested via AJAX
-        if (request()->expectsJson() || request()->wantsJson()) {
-            return response()->json($book, 200);
+        // Generate control numbers if missing (for books created before this feature)
+        $controlNumbers = $book->control_numbers ?? [];
+        if (empty($controlNumbers) && $book->copies > 0) {
+            $base = $book->call_number ?? 'AUTO';
+            for ($i = 1; $i <= $book->copies; $i++) {
+                $controlNumbers[] = $base . '-' . str_pad($i, 3, '0', STR_PAD_LEFT);
+            }
         }
         
-        // View does not exist, fallback to index
-        return redirect()->route('books.index')->with('warning', 'Book details not available.');
+        // Ensure copy_status array exists
+        $copyStatus = $book->copy_status ?? [];
+        while (count($copyStatus) < count($controlNumbers)) {
+            $copyStatus[] = 'available';
+        }
+        
+        // Ensure copy_years array exists
+        $copyYears = $book->copy_years ?? [];
+        while (count($copyYears) < count($controlNumbers)) {
+            $copyYears[] = $book->created_at ? $book->created_at->year : date('Y');
+        }
+        
+        // Ensure copy_conditions array exists
+        $copyConditions = $book->copy_conditions ?? [];
+        while (count($copyConditions) < count($controlNumbers)) {
+            $copyConditions[] = 'Brand New';
+        }
+        
+        // Always return JSON for this endpoint (requested via AJAX/fetch)
+        return response()->json([
+            'id' => $book->id,
+            'title' => $book->title,
+            'author' => $book->author,
+            'isbn' => $book->isbn,
+            'category' => $book->category,
+            'publisher' => $book->publisher,
+            'published_year' => $book->published_year,
+            'pages' => $book->pages,
+            'edition' => $book->edition,
+            'condition' => $book->condition,
+            'acquisition_type' => $book->acquisition_type,
+            'source_of_funds' => $book->source_of_funds,
+            'cost_price' => $book->cost_price,
+            'purchase_price' => $book->purchase_price,
+            'copies' => $book->copies,
+            'available_copies' => $book->available_copies,
+            'control_numbers' => $controlNumbers,
+            'copy_status' => $copyStatus,
+            'copy_years' => $copyYears,
+            'copy_conditions' => $copyConditions,
+            'lost_control_numbers' => $book->lost_control_numbers ?? [],
+            'created_at' => $book->created_at,
+            'status' => $book->status,
+        ], 200);
     }
 
     public function create()
@@ -1100,6 +1146,16 @@ class BookController extends Controller
         ]);
 
         return redirect()->route('books.lost-damage')->with('success', 'Item marked as replaced.');
+    }
+
+    /**
+     * Clear all history logs.
+     */
+    public function clearHistory()
+    {
+        $deletedCount = LostDamagedItem::where('status', '!=', 'active')->delete();
+        
+        return redirect()->route('books.lost-damage')->with('success', "History logs cleared. $deletedCount record(s) deleted.");
     }
 }
 

@@ -1,8 +1,6 @@
-@extends('layouts.app')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
-    {{-- Header Section --}}
+    
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
             <h4 class="mb-1">Books Inventory</h4>
@@ -11,27 +9,29 @@
     
     </div>
 
-    {{-- Success Notification --}}
-    @if(session('success'))
+    
+    <?php if(session('success')): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
+            <?php echo e(session('success')); ?>
+
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-    @endif
+    <?php endif; ?>
 
-    {{-- Error Notification --}}
-    @if(session('error'))
+    
+    <?php if(session('error')): ?>
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
+            <?php echo e(session('error')); ?>
+
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-    @endif
+    <?php endif; ?>
 
-    {{-- Import Modal --}}
+    
     <div class="modal fade" id="importBooksModal" tabindex="-1" aria-labelledby="importBooksModalLabel" aria-hidden="true">
         <div class="modal-dialog">
-            <form action="{{ route('books.import.post') }}" method="POST" enctype="multipart/form-data">
-                @csrf
+            <form action="<?php echo e(route('books.import.post')); ?>" method="POST" enctype="multipart/form-data">
+                <?php echo csrf_field(); ?>
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="importBooksModalLabel">
@@ -65,8 +65,8 @@
         </div>
     </div>
 
-    {{-- Search Form --}}
-    <form id="searchForm" method="GET" action="{{ route('books.index') }}" class="mb-4">
+    
+    <form id="searchForm" method="GET" action="<?php echo e(route('books.index')); ?>" class="mb-4">
         <div class="row g-2">
             <div class="col-md-3">
                 <input
@@ -74,7 +74,7 @@
                     name="title"
                     class="form-control"
                     placeholder="Title"
-                    value="{{ request('title') }}"
+                    value="<?php echo e(request('title')); ?>"
                 >
             </div>
             <div class="col-md-3">
@@ -83,7 +83,7 @@
                     name="author"
                     class="form-control"
                     placeholder="Author"
-                    value="{{ request('author') }}"
+                    value="<?php echo e(request('author')); ?>"
                 >
             </div>
             <div class="col-md-3">
@@ -92,18 +92,18 @@
                     name="publisher"
                     class="form-control"
                     placeholder="Publisher"
-                    value="{{ request('publisher') }}"
+                    value="<?php echo e(request('publisher')); ?>"
                 >
             </div>
             <div class="col-md-2">
-                @php
+                <?php
                     $categories = $books->pluck('category')->filter()->unique()->sort()->values();
-                @endphp
+                ?>
                 <select name="category" class="form-select">
                     <option value="">All Categories</option>
-                    @foreach($categories as $cat)
-                        <option value="{{ $cat }}" {{ request('category') == $cat ? 'selected' : '' }}>{{ $cat }}</option>
-                    @endforeach
+                    <?php $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $cat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <option value="<?php echo e($cat); ?>" <?php echo e(request('category') == $cat ? 'selected' : ''); ?>><?php echo e($cat); ?></option>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </select>
             </div>
             <div class="col-md-1">
@@ -114,7 +114,7 @@
         </div>
     </form>
 
-    {{-- Books Table --}}
+    
     <div class="card shadow-sm">
         <div class="card-header">
             <h5 class="card-title mb-0">Book Inventory</h5>
@@ -140,9 +140,9 @@
                     </thead>
 
                     <tbody>
-                    @forelse($books as $book)
+                    <?php $__empty_1 = true; $__currentLoopData = $books; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $book): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                         <tr>
-                            @php
+                            <?php
                                 $ctrlBase = '-';
                                 if (!empty($book->control_numbers) && is_array($book->control_numbers) && count($book->control_numbers) > 0) {
                                     $first = $book->control_numbers[0];
@@ -156,67 +156,68 @@
                                 } elseif ($base !== '') {
                                     $ctrlBase = $base;
                                 }
-                            @endphp
+                            ?>
                             <td>
-                                <input type="checkbox" class="form-check-input book-checkbox" data-book-id="{{ $book->id }}">
+                                <input type="checkbox" class="form-check-input book-checkbox" data-book-id="<?php echo e($book->id); ?>">
                             </td>
-                            <td class="fw-semibold">{{ $ctrlBase }}</td>
+                            <td class="fw-semibold"><?php echo e($ctrlBase); ?></td>
                             <td>
-                                <div class="fw-semibold">{{ $book->title }}</div>
+                                <div class="fw-semibold"><?php echo e($book->title); ?></div>
                             </td>
-                            <td>{{ $book->author }}</td>
-                            <td class="d-none d-lg-table-cell">{{ $book->publisher ?? '-' }}</td>
-                            <td class="d-none d-lg-table-cell">{{ $book->category ?? '-' }}</td>
-                            <td class="d-none d-md-table-cell"><small>{{ $book->isbn }}</small></td>
+                            <td><?php echo e($book->author); ?></td>
+                            <td class="d-none d-lg-table-cell"><?php echo e($book->publisher ?? '-'); ?></td>
+                            <td class="d-none d-lg-table-cell"><?php echo e($book->category ?? '-'); ?></td>
+                            <td class="d-none d-md-table-cell"><small><?php echo e($book->isbn); ?></small></td>
                             <td class="d-none d-lg-table-cell">
-                                @php
+                                <?php
                                     $avail = $book->available_copies ?? $book->copies ?? 0;
                                     $total = $book->copies ?? 0;
-                                @endphp
-                                {{ $avail }}/{{ $total }}
+                                ?>
+                                <?php echo e($avail); ?>/<?php echo e($total); ?>
+
                             </td>
                             <td>
-                                @php
+                                <?php
                                     $copies = $book->copies ?? 0;
                                     $avail = $book->available_copies ?? null;
-                                @endphp
-                                @if($copies == 0 || ($avail !== null && $avail == 0))
+                                ?>
+                                <?php if($copies == 0 || ($avail !== null && $avail == 0)): ?>
                                     <span class="badge bg-danger text-white">Out of Stock</span>
-                                @elseif(($avail !== null && $avail > 0) || ($avail === null && $copies > 0))
+                                <?php elseif(($avail !== null && $avail > 0) || ($avail === null && $copies > 0)): ?>
                                     <span class="badge bg-success text-white">Available</span>
-                                @elseif(isset($book->status) && trim($book->status) !== '')
-                                    <span class="badge bg-secondary">{{ ucfirst($book->status) }}</span>
-                                @else
+                                <?php elseif(isset($book->status) && trim($book->status) !== ''): ?>
+                                    <span class="badge bg-secondary"><?php echo e(ucfirst($book->status)); ?></span>
+                                <?php else: ?>
                                     <span class="badge bg-secondary">Unknown</span>
-                                @endif
+                                <?php endif; ?>
                             </td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn btn-sm btn-outline-dark viewBookBtn" title="View"
-                                        data-book-id="{{ $book->id }}"
-                                        data-book-title="{{ $book->title }}"
-                                        data-book-author="{{ $book->author }}"
-                                        data-book-publisher="{{ $book->publisher ?? '-' }}"
-                                        data-book-isbn="{{ $book->isbn }}"
-                                        data-book-category="{{ $book->category ?? '-' }}"
-                                        data-book-published-year="{{ $book->published_year ?? '-' }}"
-                                        data-book-pages="{{ $book->pages ?? '-' }}"
-                                        data-book-edition="{{ $book->edition ?? '-' }}"
-                                        data-book-condition="{{ $book->condition ?? '-' }}"
-                                        data-book-acquisition-type="{{ $book->acquisition_type ?? '-' }}"
-                                        data-book-source-of-funds="{{ $book->source_of_funds ?? '-' }}"
-                                        data-book-purchase-price="{{ $book->purchase_price ? '₱' . number_format($book->purchase_price, 2) : '-' }}"
-                                        data-book-cost-price="{{ isset($book->cost_price) && $book->cost_price !== null ? '₱' . number_format($book->cost_price, 2) : '-' }}"
-                                        data-book-copies="{{ $book->copies ?? 0 }}" data-book-available-copies="{{ $book->available_copies ?? 0 }}"
-                                        data-book-control-numbers='@json($book->control_numbers ?? [])'
-                                        data-book-copy-status='@json($book->copy_status ?? [])'
-                                        data-book-lost-control-numbers='@json($book->lost_control_numbers ?? [])'
+                                        data-book-id="<?php echo e($book->id); ?>"
+                                        data-book-title="<?php echo e($book->title); ?>"
+                                        data-book-author="<?php echo e($book->author); ?>"
+                                        data-book-publisher="<?php echo e($book->publisher ?? '-'); ?>"
+                                        data-book-isbn="<?php echo e($book->isbn); ?>"
+                                        data-book-category="<?php echo e($book->category ?? '-'); ?>"
+                                        data-book-published-year="<?php echo e($book->published_year ?? '-'); ?>"
+                                        data-book-pages="<?php echo e($book->pages ?? '-'); ?>"
+                                        data-book-edition="<?php echo e($book->edition ?? '-'); ?>"
+                                        data-book-condition="<?php echo e($book->condition ?? '-'); ?>"
+                                        data-book-acquisition-type="<?php echo e($book->acquisition_type ?? '-'); ?>"
+                                        data-book-source-of-funds="<?php echo e($book->source_of_funds ?? '-'); ?>"
+                                        data-book-purchase-price="<?php echo e($book->purchase_price ? '₱' . number_format($book->purchase_price, 2) : '-'); ?>"
+                                        data-book-cost-price="<?php echo e(isset($book->cost_price) && $book->cost_price !== null ? '₱' . number_format($book->cost_price, 2) : '-'); ?>"
+                                        data-book-copies="<?php echo e($book->copies ?? 0); ?>" data-book-available-copies="<?php echo e($book->available_copies ?? 0); ?>"
+                                        data-book-control-numbers='<?php echo json_encode($book->control_numbers ?? [], 15, 512) ?>'
+                                        data-book-copy-status='<?php echo json_encode($book->copy_status ?? [], 15, 512) ?>'
+                                        data-book-lost-control-numbers='<?php echo json_encode($book->lost_control_numbers ?? [], 15, 512) ?>'
                                         data-bs-toggle="modal" data-bs-target="#viewBookModal">
                                         <i class="bi bi-eye"></i>
                                     
-                                    <form action="{{ route('books.destroy', $book->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this book?');">
-                                        @csrf
-                                        @method('DELETE')
+                                    <form action="<?php echo e(route('books.destroy', $book->id)); ?>" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this book?');">
+                                        <?php echo csrf_field(); ?>
+                                        <?php echo method_field('DELETE'); ?>
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -224,7 +225,7 @@
                                 </div>
                             </td>
                         </tr>
-                    @empty
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <tr>
                             <td colspan="10" class="text-center py-4">
                                 <div class="text-muted">
@@ -233,12 +234,12 @@
                                 </div>
                             </td>
                         </tr>
-                    @endforelse
+                    <?php endif; ?>
                     </tbody>
                 </table>
             </div>
 
-            {{-- Pagination and Action Buttons --}}
+            
             <div class="d-flex justify-content-between align-items-center mt-4 p-3 border-top">
                 <div>
                     <button type="button" id="clearSelectBtn" class="btn btn-outline-secondary" style="display: none;">
@@ -246,7 +247,8 @@
                     </button>
                 </div>
                 <div>
-                    {{ $books->withQueryString()->links('pagination::bootstrap-5') }}
+                    <?php echo e($books->withQueryString()->links('pagination::bootstrap-5')); ?>
+
                 </div>
                 <div>
                     <button type="button" id="deleteSelectedBtnBottom" class="btn btn-outline-danger" style="display: none;">
@@ -260,7 +262,7 @@
     
 </div>
 
-{{-- View Book Details Modal --}}
+
 <div class="modal fade" id="viewBookModal" tabindex="-1" aria-labelledby="viewBookModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
@@ -274,7 +276,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                {{-- Basic Information --}}
+                
                 <div class="row mb-4">
                     <div class="col-md-6 mb-3">
                         <label class="text-muted small">Title</label>
@@ -334,11 +336,7 @@
                     <div class="col-md-6 mb-3">
                         <label class="text-muted small">Source of Funds</label>
                         <p class="fw-semibold" id="modalSourceOfFunds">-</p>
-                    {{-- </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="text-muted small">Cost Price</label>
-                        <p class="fw-semibold" id="modalCostPrice">-</p>
-                    </div> --}}
+                    
                 </div>
 
                 <div class="row mb-4">
@@ -352,7 +350,7 @@
                     </div>
                 </div>
 
-                {{-- Physical Copies Section --}}
+                
                 <div class="mb-4" id="copiesSection" style="display: none;">
                     <h6 class="fw-semibold mb-3">Physical Copies (<span id="copiesCount">0</span>)</h6>
                     <div class="row" id="copiesContainer">
@@ -376,7 +374,7 @@
     </div>
 </div>
 
-@endsection
+<?php $__env->stopSection(); ?>
 
 <style>
     .btn-group {
@@ -594,3 +592,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\user\Herd\library\resources\views/books/index.blade.php ENDPATH**/ ?>

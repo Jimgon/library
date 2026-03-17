@@ -226,7 +226,8 @@
                                         data-book-control-numbers='<?php echo json_encode($book->control_numbers ?? [], 15, 512) ?>'
                                         data-book-copy-status='<?php echo json_encode($book->copy_status ?? [], 15, 512) ?>'
                                         data-book-copy-years='<?php echo json_encode($book->copy_years ?? [], 15, 512) ?>'
-                                        data-book-created-year="<?php echo e($book->created_at->format('Y')); ?>"
+                                        data-book-copy-conditions='<?php echo json_encode($book->copy_conditions ?? [], 15, 512) ?>'
+                                        data-book-lost-control-numbers='<?php echo json_encode($book->lost_control_numbers ?? [], 15, 512) ?>'
                                         data-bs-toggle="modal" data-bs-target="#viewBookModal">
                                         <i class="bi bi-eye"></i>
                                     </button>
@@ -299,92 +300,140 @@
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+
+            
+            <ul class="nav nav-tabs border-bottom" id="bookDetailsTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="bookInfoTab" data-bs-toggle="tab" data-bs-target="#bookInfoPane" type="button" role="tab" aria-controls="bookInfoPane" aria-selected="true">
+                        <i class="bi bi-info-circle me-1"></i>Book Information
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="copiesTab" data-bs-toggle="tab" data-bs-target="#copiesPane" type="button" role="tab" aria-controls="copiesPane" aria-selected="false">
+                        <i class="bi bi-stack me-1"></i>Physical Copies <span class="badge bg-secondary ms-2" id="copiesBadge">0</span>
+                    </button>
+                </li>
+            </ul>
+
             <div class="modal-body">
-                
-                <div class="row mb-4">
-                    <div class="col-md-6 mb-3">
-                        <label class="text-muted small">Title</label>
-                        <p class="fw-semibold" id="modalTitle">-</p>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="text-muted small">Author</label>
-                        <p class="fw-semibold" id="modalAuthor">-</p>
-                    </div>
-                </div>
+                <div class="tab-content" id="bookDetailsContent">
+                    
+                    <div class="tab-pane fade show active" id="bookInfoPane" role="tabpanel" aria-labelledby="bookInfoTab">
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Title</label>
+                                <p class="fw-semibold" id="modalTitle">-</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Author</label>
+                                <p class="fw-semibold" id="modalAuthor">-</p>
+                            </div>
+                        </div>
 
-                <div class="row mb-4">
-                    <div class="col-md-6 mb-3">
-                        <label class="text-muted small">ISBN</label>
-                        <p class="fw-semibold" id="modalISBN">-</p>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="text-muted small">Category</label>
-                        <p class="fw-semibold" id="modalCategory">-</p>
-                    </div>
-                </div>
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">ISBN</label>
+                                <p class="fw-semibold" id="modalISBN">-</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Category</label>
+                                <p class="fw-semibold" id="modalCategory">-</p>
+                            </div>
+                        </div>
 
-                <div class="row mb-4">
-                    <div class="col-md-6 mb-3">
-                        <label class="text-muted small">Publisher</label>
-                        <p class="fw-semibold" id="modalPublisher">-</p>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="text-muted small">Published Year</label>
-                        <p class="fw-semibold" id="modalPublishedYear">-</p>
-                    </div>
-                </div>
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Publisher</label>
+                                <p class="fw-semibold" id="modalPublisher">-</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Published Year</label>
+                                <p class="fw-semibold" id="modalPublishedYear">-</p>
+                            </div>
+                        </div>
 
-                <div class="row mb-4">
-                    <div class="col-md-6 mb-3">
-                        <label class="text-muted small">Pages</label>
-                        <p class="fw-semibold" id="modalPages">-</p>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="text-muted small">Edition</label>
-                        <p class="fw-semibold" id="modalEdition">-</p>
-                    </div>
-                </div>
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Pages</label>
+                                <p class="fw-semibold" id="modalPages">-</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Edition</label>
+                                <p class="fw-semibold" id="modalEdition">-</p>
+                            </div>
+                        </div>
 
-                <div class="row mb-4">
-                    <div class="col-md-6 mb-3">
-                        <label class="text-muted small">Condition</label>
-                        <p class="fw-semibold" id="modalCondition">-</p>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="text-muted small">Acquisition Type</label>
-                        <p class="fw-semibold" id="modalAcquisitionType">-</p>
-                    </div>
-                </div>
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Condition</label>
+                                <p class="fw-semibold" id="modalCondition">-</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Acquisition Type</label>
+                                <p class="fw-semibold" id="modalAcquisitionType">-</p>
+                            </div>
+                        </div>
 
-                <div class="row mb-4">
-                    <div class="col-md-6 mb-3">
-                        <label class="text-muted small">Source of Funds</label>
-                        <p class="fw-semibold" id="modalSourceOfFunds">-</p>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="text-muted small">Cost Price</label>
-                        <p class="fw-semibold" id="modalCostPrice">-</p>
-                    </div>
-                </div>
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Source of Funds</label>
+                                <p class="fw-semibold" id="modalSourceOfFunds">-</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Cost Price</label>
+                                <p class="fw-semibold" id="modalCostPrice">-</p>
+                            </div>
+                        </div>
 
-                <div class="row mb-4">
-                    <div class="col-md-6 mb-3">
-                        <label class="text-muted small">Purchase Price</label>
-                        <p class="fw-semibold" id="modalPurchasePrice">-</p>
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Purchase Price</label>
+                                <p class="fw-semibold" id="modalPurchasePrice">-</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Available / Total Copies</label>
+                                <p class="fw-semibold" id="modalCopies">-</p>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="text-muted small">Available / Total Copies</label>
-                        <p class="fw-semibold" id="modalCopies">-</p>
-                    </div>
-                </div>
 
-                
-                <div class="mb-4" id="copiesSection" style="display: none;">
-                    <h6 class="fw-semibold mb-3">Physical Copies (<span id="copiesCount">0</span>)</h6>
-                    <div class="row" id="copiesContainer">
+                    
+                    <div class="tab-pane fade" id="copiesPane" role="tabpanel" aria-labelledby="copiesTab">
+                        
+                        <div class="mb-3" id="conditionFiltersContainer">
+                            <div class="btn-group" role="group" aria-label="Filter by condition">
+                                <button type="button" class="btn btn-sm btn-outline-secondary condition-filter-btn active" data-condition="">
+                                    <i class="bi bi-funnel me-1"></i>All
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-success condition-filter-btn" data-condition="Brand New">
+                                    <i class="bi bi-star-fill me-1"></i>Brand New
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-warning condition-filter-btn" data-condition="Old">
+                                    <i class="bi bi-clock-history me-1"></i>Old
+                                </button>
+                            </div>
+                        </div>
+                        <div id="noCopiesMessage" class="alert alert-info" style="display: none;">
+                            <i class="bi bi-info-circle me-2"></i>No physical copies available
+                        </div>
+                        <div class="table-responsive" id="copiesTableContainer" style="display: none;">
+                            <table class="table table-hover table-sm align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 20%;">Control Number</th>
+                                        <th style="width: 20%;">Condition</th>
+                                        <th style="width: 20%;">Year Donated</th>
+                                        <th style="width: 20%;">Status</th>
+                                        <th style="width: 20%;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="copiesTableBody">
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-                
             </div>
             <div class="modal-footer border-0">
                 <a href="#" id="editBookBtn" class="btn btn-primary">
@@ -500,6 +549,54 @@
         padding: 0.375rem 0.75rem;
     }
 
+    /* Tab navigation styles */
+    .nav-tabs {
+        background-color: #f8f9fa;
+        border-radius: 0.25rem 0.25rem 0 0;
+    }
+
+    .nav-tabs .nav-link {
+        border: none;
+        color: #495057;
+        font-weight: 500;
+        padding: 0.75rem 1rem;
+    }
+
+    .nav-tabs .nav-link:hover {
+        color: #0d6efd;
+        border-color: transparent;
+    }
+
+    .nav-tabs .nav-link.active {
+        color: #0d6efd;
+        background-color: white;
+        border-bottom: 2px solid #0d6efd;
+    }
+
+    /* Table styling for copies */
+    #copiesTableBody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    #copiesTableBody td {
+        vertical-align: middle;
+        padding: 0.75rem;
+    }
+
+    .badge {
+        font-size: 0.8rem;
+        padding: 0.35rem 0.6rem;
+    }
+
+    /* Modal improvements */
+    .modal-body {
+        padding: 1.5rem;
+    }
+
+    .tab-content {
+        padding-top: 1rem;
+    }
+
     /* Center modal properly */
     #addBookModal .modal-dialog {
         display: flex;
@@ -510,6 +607,30 @@
 
     #addBookModal .modal-content {
         max-height: 90vh;
+    }
+
+    /* Condition filter buttons in modal */
+    #conditionFiltersContainer .btn-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    #conditionFiltersContainer .condition-filter-btn {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+
+    #conditionFiltersContainer .condition-filter-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    #conditionFiltersContainer .condition-filter-btn.active {
+        font-weight: 600;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
     }
 </style>
 
@@ -663,6 +784,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const button = event.relatedTarget;
             const bookId = button.getAttribute('data-book-id');
             
+            console.log('Opening book details modal for book ID:', bookId);
+            
             // Show loading state
             const modalBody = viewBookModal.querySelector('.modal-body');
             const originalContent = modalBody.innerHTML;
@@ -682,7 +805,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(data => {
-                console.log('Book data fetched:', data);
+                console.log('=== BOOK DATA RECEIVED ===');
+                console.log('Book data:', data);
+                console.log('Total Copies:', data.copies);
+                console.log('Available Copies:', data.available_copies);
+                console.log('Control Numbers:', data.control_numbers);
+                console.log('Copy Status:', data.copy_status);
+                console.log('Copy Years:', data.copy_years);
+                console.log('Copy Conditions:', data.copy_conditions);
+                console.log('Lost Control Numbers:', data.lost_control_numbers);
+                console.log('==================');
                 
                 // Populate basic info
                 document.getElementById('modalTitle').textContent = data.title || '-';
@@ -701,46 +833,104 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('modalCopies').textContent = `${data.available_copies || '0'} / ${data.copies || '0'}`;
 
                 // Populate physical copies
-                const copiesContainer = document.getElementById('copiesContainer');
-                const copiesSection = document.getElementById('copiesSection');
-                copiesContainer.innerHTML = '';
+                const copiesTableBody = document.getElementById('copiesTableBody');
+                const copiesTableContainer = document.getElementById('copiesTableContainer');
+                const noCopiesMessage = document.getElementById('noCopiesMessage');
+                const copiesBadge = document.getElementById('copiesBadge');
+                copiesTableBody.innerHTML = '';
 
                 const controlNumbers = data.control_numbers || [];
                 const copyStatus = data.copy_status || [];
                 const copyYears = data.copy_years || [];
                 const copyConditions = data.copy_conditions || [];
+                const lostControlNumbers = data.lost_control_numbers || [];
+                const totalCopies = data.copies || 0;
 
-                if (controlNumbers.length > 0) {
-                    document.getElementById('copiesCount').textContent = controlNumbers.length;
+                console.log('Displaying copies - Total:', totalCopies, 'Control Numbers Count:', controlNumbers.length);
+
+                // Display copies if total copies > 0
+                if (totalCopies > 0) {
+                    // Update badge with actual copy count
+                    const displayCount = controlNumbers.length > 0 ? controlNumbers.length : totalCopies;
+                    copiesBadge.textContent = displayCount;
                     
-                    controlNumbers.forEach((cn, idx) => {
-                        const status = copyStatus[idx] || 'Available';
-                        const badgeClass = status.toLowerCase() === 'available' ? 'bg-success' : 'bg-secondary';
-                        const acquisitionYear = (copyYears && copyYears[idx]) ? copyYears[idx] : (data.created_at ? new Date(data.created_at).getFullYear() : new Date().getFullYear());
-                        const condition = (copyConditions && copyConditions[idx]) ? copyConditions[idx] : 'Brand New';
-                        const copyCard = `
-                            <div class="col-md-4 mb-3">
-                                <div class="border rounded p-3 position-relative">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <strong>Copy #${idx + 1}</strong>
-                                        <div>
-                                            <span class="badge ${badgeClass}">${status}</span>
-                                            <button type="button" class="btn btn-sm btn-outline-danger ms-1 deleteCopyBtn" data-book-id="${bookId}" data-copy-index="${idx}" title="Delete copy">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <p class="text-muted small mb-1">Ctrl: <strong>${cn}</strong></p>
-                                    <p class="text-muted small mb-1">Year: <strong>${acquisitionYear}</strong></p>
-                                    <p class="text-muted small mb-0">Condition: <strong>${condition}</strong></p>
-                                </div>
-                            </div>
-                        `;
-                        copiesContainer.innerHTML += copyCard;
-                    });
+                    // Display all control numbers (active copies only)
+                    if (controlNumbers.length > 0) {
+                        controlNumbers.forEach((cn, index) => {
+                            // Skip if this is a lost/damaged copy
+                            if (lostControlNumbers && lostControlNumbers.includes(cn)) {
+                                return;
+                            }
+
+                            const status = (copyStatus && copyStatus[index]) ? copyStatus[index] : 'Available';
+                            const badgeClass = status.toLowerCase() === 'available' ? 'bg-success' : 'bg-warning text-dark';
+                            const acquisitionYear = (copyYears && copyYears[index]) ? copyYears[index] : (data.created_at ? new Date(data.created_at).getFullYear() : new Date().getFullYear());
+                            const condition = (copyConditions && copyConditions[index]) ? copyConditions[index] : 'Brand New';
+                            const conditionBadgeClass = condition.toLowerCase() === 'brand new' ? 'bg-success' : (condition.toLowerCase() === 'good' ? 'bg-info' : 'bg-warning text-dark');
+                            
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>
+                                    <strong>${cn}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge ${conditionBadgeClass}">${condition}</span>
+                                </td>
+                                <td>
+                                    <strong>${acquisitionYear}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge ${badgeClass}">${status}</span>
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-danger deleteCopyBtn" data-book-id="${bookId}" data-copy-index="${index}" title="Delete copy">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            `;
+                            copiesTableBody.appendChild(row);
+                        });
+                        
+                        copiesTableContainer.style.display = 'block';
+                        noCopiesMessage.style.display = 'none';
+                    } else if (totalCopies > 0) {
+                        // Copies exist but no control numbers assigned yet
+                        // Create placeholder rows for the copies
+                        const currentYear = new Date().getFullYear();
+                        for (let i = 0; i < totalCopies; i++) {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>
+                                    <span class="badge bg-secondary">Unassigned</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">Unknown</span>
+                                </td>
+                                <td>
+                                    <strong>${currentYear}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">Available</span>
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Assign control number first">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            `;
+                            copiesTableBody.appendChild(row);
+                        }
+                        
+                        copiesTableContainer.style.display = 'block';
+                        noCopiesMessage.style.display = 'none';
+                    } else {
+                        // Fallback: no copies to display
+                        copiesTableContainer.style.display = 'none';
+                        noCopiesMessage.style.display = 'block';
+                    }
                     
-                    // Attach delete event listeners
-                    copiesContainer.querySelectorAll('.deleteCopyBtn').forEach(btn => {
+                    // Attach delete event listeners to active deletion buttons
+                    copiesTableBody.querySelectorAll('.deleteCopyBtn:not(:disabled)').forEach(btn => {
                         btn.addEventListener('click', function() {
                             const bookId = this.getAttribute('data-book-id');
                             const copyIndex = this.getAttribute('data-copy-index');
@@ -748,9 +938,39 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                     });
                     
-                    copiesSection.style.display = 'block';
+                    // Attach filter button listeners
+                    const filterButtons = document.querySelectorAll('.condition-filter-btn');
+                    filterButtons.forEach(button => {
+                        button.addEventListener('click', function() {
+                            const selectedCondition = this.getAttribute('data-condition');
+                            
+                            // Update active button state
+                            filterButtons.forEach(btn => btn.classList.remove('active'));
+                            this.classList.add('active');
+                            
+                            // Filter table rows
+                            const rows = copiesTableBody.querySelectorAll('tr');
+                            rows.forEach(row => {
+                                if (selectedCondition === '') {
+                                    // Show all
+                                    row.style.display = '';
+                                } else {
+                                    // Filter by condition
+                                    const conditionBadge = row.querySelector('td:nth-child(2) .badge');
+                                    if (conditionBadge && conditionBadge.textContent.trim() === selectedCondition) {
+                                        row.style.display = '';
+                                    } else {
+                                        row.style.display = 'none';
+                                    }
+                                }
+                            });
+                        });
+                    });
                 } else {
-                    copiesSection.style.display = 'none';
+                    // No copies at all
+                    copiesTableContainer.style.display = 'none';
+                    noCopiesMessage.style.display = 'block';
+                    copiesBadge.textContent = '0';
                 }
 
                 // Update edit button link
@@ -779,11 +999,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             })
             .catch(err => {
-                console.error('Error fetching book data:', err);
-                console.error('Full error:', err);
+                console.error('❌ Error fetching book data:', err);
+                console.error('Full error object:', err);
+                
                 // Set all fields to show error status
                 document.getElementById('modalTitle').textContent = 'Error Loading Data';
-                document.getElementById('modalAuthor').textContent = 'Please check console for details';
+                document.getElementById('modalAuthor').textContent = `Error: ${err.message}`;
+                
+                // Show error in copies section
+                const copiesTableContainer = document.getElementById('copiesTableContainer');
+                const noCopiesMessage = document.getElementById('noCopiesMessage');
+                noCopiesMessage.innerHTML = `<i class="bi bi-exclamation-circle me-2"></i>Error loading copies: ${err.message}. Please check the browser console for details.`;
+                noCopiesMessage.style.display = 'block';
+                copiesTableContainer.style.display = 'none';
             });
         });
     }

@@ -219,10 +219,21 @@
 
         <div class="card-body">
 
-            <h5 class="fw-bold">History logs</h5>
-            <p class="text-muted small">
-                Recent lost/damaged actions (read-only).
-            </p>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold mb-1">History logs</h5>
+                    <p class="text-muted small mb-0">
+                        Recent lost/damaged actions (read-only).
+                    </p>
+                </div>
+                
+                <form action="<?php echo e(route('books.lost-damage.clear-history')); ?>" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to clear all history logs? This action cannot be undone.');">
+                    <?php echo csrf_field(); ?>
+                    <button type="submit" class="btn btn-sm btn-danger">
+                        <i class="bi bi-trash me-1"></i>Clear History
+                    </button>
+                </form>
+            </div>
 
             <div class="table-responsive">
 
