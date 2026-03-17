@@ -16,9 +16,12 @@ class TeacherBorrowController extends Controller
         $settings = DB::table('penalty_settings')->first();
         // teachers come from dedicated Teacher model
         $teachers = Teacher::whereNull('deleted_at')->orderBy('name')->get();
-        $books = Book::all()->filter(function($book) {
-            return $book->available_copies > 0;
-        });
+        // Filter books: only include those with available copies AND at least one non-lost control number
+        $books = Book::all()
+            ->filter(function($book) {
+                $availableCtrls = $book->getAvailableControlNumbers();
+                return $book->available_copies > 0 && !empty($availableCtrls);
+            });
         $users = collect(); // empty for student form
         return view('borrow.create', compact('settings', 'teachers', 'books', 'users'));
     }

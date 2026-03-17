@@ -47,4 +47,9 @@ class LostDamagedItem extends Model
         }
         return User::find($this->user_id);
     }
+
+    public function histories()
+    {
+        return $this->hasMany(LostDamagedItemHistory::class);
+    }
 }

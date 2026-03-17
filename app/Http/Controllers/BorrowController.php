@@ -33,11 +33,24 @@ class BorrowController extends Controller
                 ->whereNull('returned_at')
                 ->pluck('book_id')
                 ->toArray();
+            // Exclude books where ALL copies are marked as lost
             $books = Book::where('status', 'available')
                 ->whereNotIn('id', $borrowedBookIds)
-                ->get();
+                ->get()
+                ->filter(function ($book) {
+                    // Only include books that have at least one available control number (not lost)
+                    $availableCtrls = $book->getAvailableControlNumbers();
+                    return !empty($availableCtrls);
+                });
         } else {
-            $books = Book::where('status', 'available')->get();
+            // Exclude books where ALL copies are marked as lost
+            $books = Book::where('status', 'available')
+                ->get()
+                ->filter(function ($book) {
+                    // Only include books that have at least one available control number (not lost)
+                    $availableCtrls = $book->getAvailableControlNumbers();
+                    return !empty($availableCtrls);
+                });
         }
 
         $settings = DB::table('penalty_settings')->first();
@@ -51,8 +64,13 @@ class BorrowController extends Controller
         // Only pass teachers from the separate Teacher collection
         $users = Teacher::whereNull('deleted_at')->orderBy('name', 'asc')->get();
 
-        // use regular books for distribution; show entire inventory (even zero copies)
-        $books = Book::all();
+        // use regular books for distribution; show only books with available copies (not all lost)
+        $books = Book::all()
+            ->filter(function ($book) {
+                // Only include books that have at least one available control number (not lost)
+                $availableCtrls = $book->getAvailableControlNumbers();
+                return !empty($availableCtrls);
+            });
 
         $settings = DB::table('penalty_settings')->first();
 
@@ -103,6 +121,12 @@ class BorrowController extends Controller
                 // Use provided control number if available, otherwise auto-assign
                 $controlNumber = $copyNumbers[$index] ?? null;
                 
+                // Validate that provided/auto-assigned control number is not lost
+                if ($controlNumber && $book->isControlNumberLost($controlNumber)) {
+                    $errors[] = "{$book->title}: Control number {$controlNumber} is marked as lost and cannot be borrowed";
+                    continue;
+                }
+                
                 if (!$controlNumber && $book->control_numbers && is_array($book->control_numbers)) {
                     // Count how many of this book are already borrowed (not returned)
                     $borrowedCount = Borrow::where('book_id', $bookId)
@@ -110,11 +134,36 @@ class BorrowController extends Controller
                         ->count();
                     
                     // Get the control number at the borrowed count index (next available)
-                    if (isset($book->control_numbers[$borrowedCount])) {
-                        $controlNumber = $book->control_numbers[$borrowedCount];
-                    } else if (count($book->control_numbers) > 0) {
-                        // Fallback to last control number if index out of bounds
-                        $controlNumber = $book->control_numbers[count($book->control_numbers) - 1];
+                    // Skip lost control numbers
+                    $lostCtrls = $book->lost_control_numbers ?? [];
+                    $availableIdx = 0;
+                    $ctrlToUse = null;
+                    
+                    for ($i = 0; $i < count($book->control_numbers); $i++) {
+                        if (!in_array($book->control_numbers[$i], $lostCtrls)) {
+                            if ($availableIdx == $borrowedCount) {
+                                $ctrlToUse = $book->control_numbers[$i];
+                                break;
+                            }
+                            $availableIdx++;
+                        }
+                    }
+                    
+                    if ($ctrlToUse) {
+                        $controlNumber = $ctrlToUse;
+                    } else if (!empty($book->control_numbers)) {
+                        // Fallback: use last non-lost control number
+                        for ($i = count($book->control_numbers) - 1; $i >= 0; $i--) {
+                            if (!in_array($book->control_numbers[$i], $lostCtrls)) {
+                                $controlNumber = $book->control_numbers[$i];
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (!$controlNumber) {
+                        $errors[] = "{$book->title}: No available control numbers (all lost)";
+                        continue;
                     }
                 }
 
@@ -236,6 +285,13 @@ class BorrowController extends Controller
                 // Use provided control number if available, otherwise auto-assign
                 $controlNumber = $copyNumbers[$index] ?? null;
                 
+                // Validate that provided/auto-assigned control number is not lost
+                if ($controlNumber && $book->isControlNumberLost($controlNumber)) {
+                    $errorCount++;
+                    $errors[] = "{$book->title}: Control number {$controlNumber} is marked as lost and cannot be borrowed";
+                    continue;
+                }
+                
                 if (!$controlNumber && $book->control_numbers && is_array($book->control_numbers)) {
                     // Count how many of this book are already borrowed (not returned)
                     $borrowedCount = Borrow::where('book_id', $bookId)
@@ -243,11 +299,37 @@ class BorrowController extends Controller
                         ->count();
                     
                     // Get the control number at the borrowed count index (next available)
-                    if (isset($book->control_numbers[$borrowedCount])) {
-                        $controlNumber = $book->control_numbers[$borrowedCount];
-                    } else if (count($book->control_numbers) > 0) {
-                        // Fallback to last control number if index out of bounds
-                        $controlNumber = $book->control_numbers[count($book->control_numbers) - 1];
+                    // Skip lost control numbers
+                    $lostCtrls = $book->lost_control_numbers ?? [];
+                    $availableIdx = 0;
+                    $ctrlToUse = null;
+                    
+                    for ($i = 0; $i < count($book->control_numbers); $i++) {
+                        if (!in_array($book->control_numbers[$i], $lostCtrls)) {
+                            if ($availableIdx == $borrowedCount) {
+                                $ctrlToUse = $book->control_numbers[$i];
+                                break;
+                            }
+                            $availableIdx++;
+                        }
+                    }
+                    
+                    if ($ctrlToUse) {
+                        $controlNumber = $ctrlToUse;
+                    } else if (!empty($book->control_numbers)) {
+                        // Fallback: use last non-lost control number
+                        for ($i = count($book->control_numbers) - 1; $i >= 0; $i--) {
+                            if (!in_array($book->control_numbers[$i], $lostCtrls)) {
+                                $controlNumber = $book->control_numbers[$i];
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (!$controlNumber) {
+                        $errorCount++;
+                        $errors[] = "{$book->title}: No available control numbers (all lost)";
+                        continue;
                     }
                 }
 
@@ -386,6 +468,12 @@ class BorrowController extends Controller
                     'role' => $borrow->role,
                     'origin' => $borrow->origin,
                 ]);
+
+                // Mark the control number as lost if this book is marked as lost
+                if ($borrow->remark === 'Lost' && $borrow->book) {
+                    $controlNumber = $borrow->copy_number ?? 'BK-' . $borrow->book_id;
+                    $borrow->book->markControlNumberAsLost($controlNumber);
+                }
             }
 
             // Mark as returned

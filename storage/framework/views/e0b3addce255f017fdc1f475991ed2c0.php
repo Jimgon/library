@@ -215,6 +215,8 @@
             ->whereNull('returned_at')
             ->pluck('copy_number')
             ->toArray();
+        // Get lost control numbers for this book
+        $lostCtrls = $book->lost_control_numbers ?? [];
                                         ?>
                                         <option value="<?php echo e($book->_id ?? $book->id); ?>"
                                                         data-title="<?php echo e($book->title); ?>"
@@ -224,7 +226,8 @@
                                                         data-available-copies="<?php echo e($avail); ?>"
                                                         data-total-copies="<?php echo e($total); ?>"
                                                         data-control-numbers='<?php echo json_encode($book->control_numbers ?? [], 15, 512) ?>'
-                                                        data-borrowed-controls='<?php echo json_encode($borrowedCtrls, 15, 512) ?>'>
+                                                        data-borrowed-controls='<?php echo json_encode($borrowedCtrls, 15, 512) ?>'
+                                                        data-lost-controls='<?php echo json_encode($lostCtrls, 15, 512) ?>'>
                                             <?php echo e($book->title); ?> (<?php echo e($avail); ?>/<?php echo e($total); ?> available)
                                         </option>
                                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -417,7 +420,8 @@
                         author: opt.dataset.author || '',
                         publisher: opt.dataset.publisher || '',
                         controlNumbers: opt.dataset.controlNumbers ? JSON.parse(opt.dataset.controlNumbers) : [],
-                        borrowedControls: opt.dataset.borrowedControls ? JSON.parse(opt.dataset.borrowedControls) : []
+                        borrowedControls: opt.dataset.borrowedControls ? JSON.parse(opt.dataset.borrowedControls) : [],
+                        lostControls: opt.dataset.lostControls ? JSON.parse(opt.dataset.lostControls) : []
                     };
                 });
 
@@ -444,10 +448,11 @@
                     bookTitle.value = data.title || '';
                     bookAuthor.value = data.author || '';
                     bookPublisher.value = data.publisher || '';
-                    // Show control numbers - filter out borrowed ones
+                    // Show control numbers - filter out borrowed ones and lost ones
                     if (data.controlNumbers && data.controlNumbers.length > 0) {
                         const borrowedSet = new Set(data.borrowedControls || []);
-                        const availableCtrls = data.controlNumbers.filter(ctrl => !borrowedSet.has(ctrl));
+                        const lostSet = new Set(data.lostControls || []);
+                        const availableCtrls = data.controlNumbers.filter(ctrl => !borrowedSet.has(ctrl) && !lostSet.has(ctrl));
                         controlNumberSelect.innerHTML = '<option value="" disabled selected>Select a copy...</option>';
                         if (availableCtrls.length > 0) {
                             availableCtrls.forEach((ctrl) => {

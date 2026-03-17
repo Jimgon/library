@@ -38,6 +38,7 @@ class Book extends Model
         'control_numbers',
         'copy_years',
         'copy_conditions',
+        'lost_control_numbers',
     ];
 
     protected $casts = [
@@ -45,6 +46,7 @@ class Book extends Model
         'copy_years' => 'array',
         'copy_status' => 'array',
         'copy_conditions' => 'array',
+        'lost_control_numbers' => 'array',
     ];
 
     protected $dates = ['deleted_at'];
@@ -76,5 +78,47 @@ class Book extends Model
     {
          return $this->copies - $this->borrowed_copies;
 
+    }
+
+    /**
+     * Mark a control number as lost/unavailable
+     */
+    public function markControlNumberAsLost($controlNumber)
+    {
+        $lostNumbers = $this->lost_control_numbers ?? [];
+        if (!in_array($controlNumber, $lostNumbers)) {
+            $lostNumbers[] = $controlNumber;
+            $this->update(['lost_control_numbers' => $lostNumbers]);
+        }
+    }
+
+    /**
+     * Check if a control number is marked as lost
+     */
+    public function isControlNumberLost($controlNumber)
+    {
+        $lostNumbers = $this->lost_control_numbers ?? [];
+        return in_array($controlNumber, $lostNumbers);
+    }
+
+    /**
+     * Get available control numbers (not borrowed and not lost)
+     */
+    public function getAvailableControlNumbers()
+    {
+        if (!$this->control_numbers || !is_array($this->control_numbers)) {
+            return [];
+        }
+
+        $borrowedCtrls = $this->borrows()
+            ->whereNull('returned_at')
+            ->pluck('copy_number')
+            ->toArray();
+
+        $lostCtrls = $this->lost_control_numbers ?? [];
+
+        return array_filter($this->control_numbers, function ($ctrl) use ($borrowedCtrls, $lostCtrls) {
+            return !in_array($ctrl, $borrowedCtrls) && !in_array($ctrl, $lostCtrls);
+        });
     }
 }

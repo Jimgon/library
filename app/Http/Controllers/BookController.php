@@ -6,6 +6,7 @@ use App\Models\Book;
 use App\Models\DistributedBook;
 use App\Models\ActivityLog;
 use App\Models\LostDamagedItem;
+use App\Models\LostDamagedItemHistory;
 use App\Models\BookArchive;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -702,6 +703,14 @@ class BookController extends Controller
                     return back()->withErrors(['copies' => 'Control number(s) ' . implode(', ', $duplicates) . ' already exist in the system. Please refresh the page.'])->withInput();
                 }
             }
+
+            // Check if any control number is marked as lost
+            if (is_array($book->lost_control_numbers)) {
+                $lostDuplicates = array_intersect($controlNumbers, $book->lost_control_numbers);
+                if (!empty($lostDuplicates)) {
+                    return back()->withErrors(['copies' => 'Control number(s) ' . implode(', ', $lostDuplicates) . ' are marked as lost and cannot be reused. The book(s) with these control numbers are no longer available.'])->withInput();
+                }
+            }
         }
 
         // Prepare copy years and copy status arrays
@@ -1060,6 +1069,13 @@ class BookController extends Controller
             'details' => "Lost/damaged item for book '{$lostDamagedItem->book?->title}' marked as returned.",
         ]);
 
+        LostDamagedItemHistory::create([
+            'lost_damaged_item_id' => $lostDamagedItem->id,
+            'action' => 'returned',
+            'remarks' => "Book '{$lostDamagedItem->book?->title}' marked as returned.",
+            'created_by' => Auth::id(),
+        ]);
+
         return redirect()->route('books.lost-damage')->with('success', 'Item marked as returned.');
     }
 
@@ -1074,6 +1090,13 @@ class BookController extends Controller
             'user_id' => Auth::id(),
             'action'  => 'Marked as Replaced',
             'details' => "Lost/damaged item for book '{$lostDamagedItem->book?->title}' marked as replaced.",
+        ]);
+
+        LostDamagedItemHistory::create([
+            'lost_damaged_item_id' => $lostDamagedItem->id,
+            'action' => 'replaced',
+            'remarks' => "Book '{$lostDamagedItem->book?->title}' marked as replaced.",
+            'created_by' => Auth::id(),
         ]);
 
         return redirect()->route('books.lost-damage')->with('success', 'Item marked as replaced.');
