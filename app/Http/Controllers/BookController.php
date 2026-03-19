@@ -691,10 +691,10 @@ class BookController extends Controller
             'title'    => 'required|string|max:255',
             'author'   => 'required|string|max:255',
             'publisher' => 'nullable|string|max:255',
-            'isbn'     => 'required|numeric|digits_between:10,20',
+            'isbn'     => 'required|numeric|digits:13',
             'category' => 'required|string|max:255',
             'other_category' => 'nullable|required_if:category,other|string|max:255',
-            'call_number' => 'nullable|string|max:50|unique:books,call_number',
+            'call_number' => 'nullable|string|max:50',
             'copies'   => 'required|integer|min:1',
             'published_year' => 'nullable|integer|min:1900|max:'.(date('Y')+1),
             'pages' => 'nullable|integer|min:1',
@@ -704,8 +704,12 @@ class BookController extends Controller
             'purchase_price' => 'nullable|numeric|min:0',
             'cost_price' => 'nullable|numeric|min:0',
             'source_of_funds' => 'nullable|string|max:255',
+            'control_numbers' => 'nullable|array',
+            'control_numbers.*' => 'string|max:50',
             'copy_year' => 'nullable|array',
+            'copy_year.*' => 'nullable|integer|min:1900|max:'.(date('Y')+1),
             'copy_status' => 'nullable|array',
+            'copy_status.*' => 'nullable|string|max:50',
         ]);
 
         if (Book::where('isbn', $request->isbn)->exists()) {

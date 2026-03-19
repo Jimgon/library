@@ -12,7 +12,8 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         // Total counts
-        $totalBooks = Book::count();
+        $totalBookTitles = Book::count();
+        $totalBooks = Book::sum('copies');
         $totalUsers = User::count();
         $totalBorrows = Borrow::count();
         // Borrows with due date within 3 days and not returned

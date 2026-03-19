@@ -254,7 +254,7 @@
                 
                 <td>
                     <?php $selected = old('remark', $borrow->remark ?? ''); ?>
-                    <select name="remark" class="form-select form-select-sm remark-select" aria-label="Set remark">
+                    <select class="form-select form-select-sm remark-select student-remark-select-<?php echo e($borrow->id); ?>" aria-label="Set remark" data-borrow-id="<?php echo e($borrow->id); ?>">
                         <option value="No Remarks" <?php echo e($selected === 'No Remarks' ? 'selected' : ''); ?>>No Remarks</option>
                         <option value="On Time" <?php echo e($selected === 'On Time' ? 'selected' : ''); ?>>On Time</option>
                         <option value="Late Return" <?php echo e($selected === 'Late Return' ? 'selected' : ''); ?>>Late Return</option>
@@ -265,21 +265,23 @@
 
                 
                 <td class="text-center">
-                    <form action="<?php echo e(route('borrow.return.process', $borrow->id)); ?>" method="POST" class="d-flex gap-1 justify-content-center flex-wrap return-form" data-quantity="<?php echo e($quantity); ?>">
+                    <form action="<?php echo e(route('borrow.return.process', $borrow->id)); ?>" method="POST" class="d-flex gap-1 justify-content-center flex-wrap return-form" data-quantity="<?php echo e($quantity); ?>" data-borrow-id="<?php echo e($borrow->id); ?>">
                         <?php echo csrf_field(); ?>
                         
                         
-                        <div style="display: none;">
+                        <input type="hidden" name="remark" class="student-remark-input-<?php echo e($borrow->id); ?>" value="">
+                        
+                        
+                        <div style="display: none;" class="borrow-ids-container">
                             <?php $ctrlIndex = 0; ?>
                             <?php $__currentLoopData = $unreturned; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $b): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                <input type="checkbox" class="borrow-id-checkbox" name="borrow_ids[]" value="<?php echo e($b->id); ?>" checked>
+                                <input type="checkbox" class="borrow-id-checkbox" name="borrow_ids[]" value="<?php echo e($b->id); ?>" checked data-remark="<?php echo e($selected); ?>">
                                 <?php $ctrlIndex++; ?>
                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </div>
                         
                         
                         <input type="hidden" name="quantity_returned" class="quantity-returned-input" value="<?php echo e($quantity); ?>">
-                        <input type="hidden" name="remark" class="remark-hidden-input" value="<?php echo e($selected); ?>">
                         
                         <button type="submit" class="btn btn-sm btn-success return-btn" title="Process return">
                             <i class="bi bi-check-circle me-1"></i>Return
@@ -484,35 +486,36 @@
 
                 
                 <td>
-                    <span class="text-muted small"><?php echo e($remark); ?></span>
+                    <?php $selected = old('remark', $borrow->remark ?? ''); ?>
+                    <select class="form-select form-select-sm remark-select teacher-remark-select-<?php echo e($borrow->id); ?>" aria-label="Set remark" data-borrow-id="<?php echo e($borrow->id); ?>">
+                        <option value="No Remarks" <?php echo e($selected === 'No Remarks' ? 'selected' : ''); ?>>No Remarks</option>
+                        <option value="On Time" <?php echo e($selected === 'On Time' ? 'selected' : ''); ?>>On Time</option>
+                        <option value="Late Return" <?php echo e($selected === 'Late Return' ? 'selected' : ''); ?>>Late Return</option>
+                        <option value="Lost" <?php echo e($selected === 'Lost' ? 'selected' : ''); ?>>Lost</option>
+                        <option value="Damage" <?php echo e($selected === 'Damage' ? 'selected' : ''); ?>>Damage</option>
+                    </select>
                 </td>
 
                 
                 <td class="text-center">
-                    <form action="<?php echo e(route('borrow.return.process', $borrow->id)); ?>" method="POST" class="d-flex gap-1 justify-content-center flex-wrap return-form" data-quantity="<?php echo e($quantity); ?>">
+                    <form action="<?php echo e(route('borrow.return.process', $borrow->id)); ?>" method="POST" class="d-flex gap-1 justify-content-center flex-wrap return-form" data-quantity="<?php echo e($quantity); ?>" data-borrow-id="<?php echo e($borrow->id); ?>">
                         <?php echo csrf_field(); ?>
                         
                         
-                        <div style="display: none;">
+                        <input type="hidden" name="remark" class="teacher-remark-input-<?php echo e($borrow->id); ?>" value="">
+                        
+                        
+                        <div style="display: none;" class="borrow-ids-container">
                             <?php $ctrlIndex = 0; ?>
                             <?php $__currentLoopData = $unreturned; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $b): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                <input type="checkbox" class="borrow-id-checkbox" name="borrow_ids[]" value="<?php echo e($b->id); ?>" checked>
+                                <?php $selected = old('remark', $b->remark ?? ''); ?>
+                                <input type="checkbox" class="borrow-id-checkbox" name="borrow_ids[]" value="<?php echo e($b->id); ?>" checked data-remark="<?php echo e($selected); ?>">
                                 <?php $ctrlIndex++; ?>
                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </div>
                         
                         
                         <input type="hidden" name="quantity_returned" class="quantity-returned-input" value="<?php echo e($quantity); ?>">
-                        
-                        
-                        <?php $selected = old('remark', $borrow->remark ?? ''); ?>
-                        <select name="remark" class="form-select form-select-sm remark-select" aria-label="Set remark" style="width: auto;">
-                            <option value="No Remarks" <?php echo e($selected === 'No Remarks' ? 'selected' : ''); ?>>No Remarks</option>
-                            <option value="On Time" <?php echo e($selected === 'On Time' ? 'selected' : ''); ?>>On Time</option>
-                            <option value="Late Return" <?php echo e($selected === 'Late Return' ? 'selected' : ''); ?>>Late Return</option>
-                            <option value="Lost" <?php echo e($selected === 'Lost' ? 'selected' : ''); ?>>Lost</option>
-                            <option value="Damage" <?php echo e($selected === 'Damage' ? 'selected' : ''); ?>>Damage</option>
-                        </select>
                         
                         <button type="submit" class="btn btn-sm btn-success return-btn" title="Process return">
                             <i class="bi bi-check-circle me-1"></i>Return
@@ -706,6 +709,18 @@
                         return;
                     }
                     
+                    // Check for lost or damaged items
+                    let hasLostOrDamaged = false;
+                    checkedRows.forEach(row => {
+                        const remarkSelect = row.querySelector('.remark-select');
+                        if (remarkSelect) {
+                            const remark = remarkSelect.value;
+                            if (remark === 'Lost' || remark === 'Damage') {
+                                hasLostOrDamaged = true;
+                            }
+                        }
+                    });
+                    
                     // Get all the forms from checked rows
                     const forms = checkedRows.map(row => row.querySelector('.return-form')).filter(form => form);
                     
@@ -725,14 +740,21 @@
                             // Update remarks before submitting
                             const remarkSelect = form.closest('tr').querySelector('.remark-select');
                             if (remarkSelect) {
-                                const remarkInput = form.querySelector('.remark-hidden-input');
-                                if (remarkInput) {
-                                    remarkInput.value = remarkSelect.value;
-                                }
+                                const checkboxes = form.querySelectorAll('.borrow-id-checkbox');
+                                checkboxes.forEach(checkbox => {
+                                    checkbox.dataset.remark = remarkSelect.value;
+                                });
                             }
                             
-                            // Submit via fetch to avoid page reload until last form
+                            // Build FormData and add per-borrow remarks
                             const formData = new FormData(form);
+                            const checkboxes = form.querySelectorAll('.borrow-id-checkbox');
+                            checkboxes.forEach(checkbox => {
+                                const remarkValue = checkbox.dataset.remark || 'No Remarks';
+                                formData.append('remarks[' + checkbox.value + ']', remarkValue);
+                            });
+                            
+                            // Submit via fetch to avoid page reload until last form
                             fetch(form.action, {
                                 method: 'POST',
                                 body: formData
@@ -749,8 +771,14 @@
                                 alert('Error submitting return. Please try again.');
                             });
                         } else {
-                            // All forms submitted, reload page
-                            window.location.reload();
+                            // All forms submitted successfully
+                            if (hasLostOrDamaged) {
+                                // Redirect to lost & damaged interface if any items were marked as Lost or Damage
+                                window.location.href = '<?php echo e(route("books.lost-damage")); ?>';
+                            } else {
+                                // Otherwise, reload the return page
+                                window.location.reload();
+                            }
                         }
                     };
                     
@@ -872,19 +900,42 @@
             studentSearchInput?.addEventListener('input', onStudentSearch);
             teacherSearchInput?.addEventListener('input', onTeacherSearch);
 
-            // Sync remarks for single form submissions
+            // Sync remarks for form submissions
             document.querySelectorAll('.return-form').forEach(form => {
                 form.addEventListener('submit', function(e) {
-                    // Get the remark select from the row
-                    const row = this.closest('tr');
-                    const remarkSelect = row?.querySelector('.remark-select');
+                    // Get the borrow ID from the form
+                    const borrowId = this.dataset.borrowId;
                     
-                    if (remarkSelect) {
-                        // Update the hidden input with the current dropdown value
-                        const remarkInput = this.querySelector('.remark-hidden-input');
-                        if (remarkInput) {
-                            remarkInput.value = remarkSelect.value;
-                        }
+                    // Check if this is a student or teacher form
+                    const studentRemarkSelect = document.querySelector(`.student-remark-select-${borrowId}`);
+                    const teacherRemarkSelect = document.querySelector(`.teacher-remark-select-${borrowId}`);
+                    const studentRemarkInput = this.querySelector(`.student-remark-input-${borrowId}`);
+                    const teacherRemarkInput = this.querySelector(`.teacher-remark-input-${borrowId}`);
+                    
+                    // Populate the hidden remark input from the select
+                    let selectedRemark = '';
+                    if (studentRemarkSelect && studentRemarkInput) {
+                        selectedRemark = studentRemarkSelect.value;
+                        studentRemarkInput.value = selectedRemark;
+                    }
+                    if (teacherRemarkSelect && teacherRemarkInput) {
+                        selectedRemark = teacherRemarkSelect.value;
+                        teacherRemarkInput.value = selectedRemark;
+                    }
+                    
+                    // For single return (no modal previously used), create remarks[] inputs for all checked items
+                    // This ensures consistency with modal-based returns
+                    const existingRemarksInputs = form.querySelectorAll('input[name^="remarks["]');
+                    if (existingRemarksInputs.length === 0) {
+                        // No remarks inputs created by modal yet, so create them from the single remark field
+                        const checkedCheckboxes = form.querySelectorAll('.borrow-id-checkbox:checked');
+                        checkedCheckboxes.forEach(checkbox => {
+                            const remarkInput = document.createElement('input');
+                            remarkInput.type = 'hidden';
+                            remarkInput.name = `remarks[${checkbox.value}]`;
+                            remarkInput.value = selectedRemark;
+                            form.appendChild(remarkInput);
+                        });
                     }
                 });
             });
@@ -925,27 +976,23 @@
                             hc.checked = checkedCheckboxes.some(cb => cb.value === hc.value);
                         });
                         
-                        // Update remarks for each checked item
+                        // Create or update remarks array inputs for each checked item
+                        // First remove any existing remarks inputs to avoid duplicates
+                        const existingRemarksInputs = targetForm.querySelectorAll('input[name^="remarks["]');
+                        existingRemarksInputs.forEach(input => input.remove());
+                        
+                        // Add a hidden input for each remark
                         checkedCheckboxes.forEach(checkbox => {
                             const borrowId = checkbox.value;
                             const remarkSelect = modal.querySelector(`.modal-remark-input[data-borrow-id="${borrowId}"]`);
                             if (remarkSelect) {
-                                // Store the remark value in a data attribute for later use
-                                checkbox.dataset.remark = remarkSelect.value;
+                                const remarkInput = document.createElement('input');
+                                remarkInput.type = 'hidden';
+                                remarkInput.name = `remarks[${borrowId}]`;
+                                remarkInput.value = remarkSelect.value;
+                                targetForm.appendChild(remarkInput);
                             }
                         });
-                        
-                        // Capture remarks and auto-submit the form
-                        const remarkSelects = modal.querySelectorAll('.modal-remark-input');
-                        let firstRemark = 'No Remarks';
-                        if (remarkSelects.length > 0) {
-                            firstRemark = remarkSelects[0].value;
-                        }
-                        
-                        const remarkInput = targetForm.querySelector('.remark-hidden-input');
-                        if (remarkInput) {
-                            remarkInput.value = firstRemark;
-                        }
                         
                         // Close the modal
                         const bsModal = bootstrap.Modal.getInstance(modal);

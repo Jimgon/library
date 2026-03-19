@@ -409,6 +409,8 @@ class BorrowController extends Controller
         // Validate remark is one of allowed values
         $request->validate([
             'remark' => ['nullable', 'in:No Remarks,On Time,Late Return,Lost,Damage'],
+            'remarks' => ['nullable', 'array'],
+            'remarks.*' => ['nullable', 'in:No Remarks,On Time,Late Return,Lost,Damage'],
             'notes' => ['nullable', 'string', 'max:500'],
             'borrow_ids' => ['nullable', 'array'],
             'borrow_ids.*' => ['string'],
@@ -425,9 +427,14 @@ class BorrowController extends Controller
         $quantityToReturn = (int) $request->input('quantity_returned', count($borrowIds));
         $quantityToReturn = min($quantityToReturn, count($borrowIds));
 
+        // Get per-borrow remarks (new structure) or fallback to single remark (old structure)
+        $perBorrowRemarks = $request->input('remarks', []);
+        $fallbackRemark = trim((string) $request->input('remark', ''));
+
         // Process only the requested quantity
         $processedCount = 0;
         $borrowCount = 0;
+        $hasLostOrDamaged = false;
         
         foreach ($borrowIds as $id) {
             // Stop if we've already processed the requested quantity
@@ -448,13 +455,15 @@ class BorrowController extends Controller
                 $computedRemark = "{$overdueDays} day(s) overdue";
             }
 
-            $inputRemark = trim((string) $request->input('remark', ''));
+            // Get per-borrow remark or use fallback
+            $inputRemark = isset($perBorrowRemarks[$id]) ? trim((string) $perBorrowRemarks[$id]) : $fallbackRemark;
 
             $borrow->remark = $inputRemark !== '' ? $inputRemark : $computedRemark;
             $borrow->notes = trim(($borrow->notes ? $borrow->notes . "\n" : '') . $request->input('notes', ''));
 
             // Record lost or damaged items
             if ($borrow->remark === 'Lost' || $borrow->remark === 'Damage') {
+                $hasLostOrDamaged = true;
                 LostDamagedItem::create([
                     'borrow_id' => $borrow->id,
                     'book_id' => $borrow->book_id,
@@ -527,10 +536,18 @@ class BorrowController extends Controller
             $borrowCount++;
         }
 
-        // After returning, go back to return list with success message
+        // After returning, redirect based on whether lost/damaged items were processed
         if ($processedCount > 0) {
+            $message = "Successfully returned {$processedCount} copy/copies!";
+            
+            // If any items were marked as lost or damaged, redirect to lost & damaged interface
+            if ($hasLostOrDamaged) {
+                return redirect()->route('books.lost-damage')
+                    ->with('success', $message);
+            }
+            
             return redirect()->route('borrow.return.index')
-                     ->with('success', "Successfully returned {$processedCount} copy/copies!");
+                     ->with('success', $message);
         } else {
             return redirect()->route('borrow.return.index')
                      ->with('error', 'No books were returned.');

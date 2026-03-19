@@ -76,8 +76,11 @@ class Book extends Model
 
     public function getAvailableCopiesAttribute()
     {
-         return $this->copies - $this->borrowed_copies;
-
+    $totalCopies = $this->copies ?? 0;
+    $borrowedCopies = $this->borrowed_copies ?? 0;
+    $lostDamagedCount = count($this->lost_control_numbers ?? []);
+    
+    return $totalCopies - $borrowedCopies - $lostDamagedCount;
     }
 
     /**

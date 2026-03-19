@@ -850,12 +850,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Display copies if total copies > 0
                 if (totalCopies > 0) {
-                    // Update badge with actual copy count
-                    const displayCount = controlNumbers.length > 0 ? controlNumbers.length : totalCopies;
-                    copiesBadge.textContent = displayCount;
-                    
                     // Display all control numbers (active copies only)
                     if (controlNumbers.length > 0) {
+                        // Count only active copies (exclude lost/damaged)
+                        let activeCopiesCount = 0;
+                        controlNumbers.forEach((cn, index) => {
+                            // Skip if this is a lost/damaged copy
+                            if (lostControlNumbers && lostControlNumbers.includes(cn)) {
+                                return;
+                            }
+                            activeCopiesCount++;
+                        });
+                        
+                        // Update badge with count of active copies only
+                        copiesBadge.textContent = activeCopiesCount;
+                        
+                        // Now display the rows
                         controlNumbers.forEach((cn, index) => {
                             // Skip if this is a lost/damaged copy
                             if (lostControlNumbers && lostControlNumbers.includes(cn)) {

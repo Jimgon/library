@@ -75,9 +75,10 @@
                                 id="isbn" 
                                 class="form-control @error('isbn') is-invalid @enderror" 
                                 value="{{ old('isbn') }}"
-                                placeholder="10 or 13 digit ISBN"
-                                pattern="[0-9]{10,14}"
-                                maxlength="14"
+                                placeholder="13 digit ISBN"
+                                pattern="[0-9]{13}"
+                                maxlength="13"
+                                minlength="13"
                                 inputmode="numeric"
                                 required
                             >
@@ -363,15 +364,29 @@
         const pagesInput = document.getElementById('pages');
         const form = document.querySelector('form');
 
+        // Validate that required elements exist
+        if (!copiesContainer) {
+            console.error('ERROR: copiesContainer element not found in DOM');
+            return;
+        }
+        if (!form) {
+            console.error('ERROR: form element not found in DOM');
+            return;
+        }
+
         // Filter ISBN to allow only numbers
-        isbnInput.addEventListener('input', function() {
-            this.value = this.value.replace(/[^0-9]/g, '');
-        });
+        if (isbnInput) {
+            isbnInput.addEventListener('input', function() {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
+        }
 
         // Filter Pages to allow only numbers
-        pagesInput.addEventListener('input', function() {
-            this.value = this.value.replace(/[^0-9]/g, '');
-        });
+        if (pagesInput) {
+            pagesInput.addEventListener('input', function() {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
+        }
 
         function toggleOther() {
             if (categorySelect.value === 'other') {
@@ -503,23 +518,39 @@
                 });
             });
 
-            row.querySelector('.removeCopyBtn').addEventListener('click', function() {
+            row.querySelector('.removeCopyBtn').addEventListener('click', function(e) {
+                e.preventDefault();
+                // Don't allow removing if it's the last copy
+                const remainingRows = copiesContainer.querySelectorAll('tr').length;
+                if (remainingRows <= 1) {
+                    alert('You must have at least one copy. Cannot remove.');
+                    return;
+                }
                 row.remove();
                 copiesInput.value = copiesContainer.querySelectorAll('tr').length;
                 // Do not decrement maxCopySuffix so deleted numbers are not reused
             });
         }
 
-        addCopyBtn.addEventListener('click', function() {
+        addCopyBtn.addEventListener('click', function(e) {
+            e.preventDefault();
             const nextCtrl = getNextControlNumber();
             const currentYear = new Date().getFullYear().toString();
             addCopyRow(nextCtrl, currentYear);
         });
 
-        // Handle form submission - ensure custom category is properly selected
+        // Handle form submission - ensure custom category is properly selected and copies exist
         form.addEventListener('submit', function(e) {
             const selectedValue = categorySelect.value;
             const customValue = otherInput.value.trim();
+
+            // Check if at least one copy row exists
+            const copyRows = copiesContainer.querySelectorAll('tr');
+            if (copyRows.length === 0) {
+                e.preventDefault();
+                alert('Error: You must add at least one copy. Please add a copy row before saving.');
+                return false;
+            }
 
             // Ensure all copy year inputs have values (fill empty with current year)
             const yearInputs = copiesContainer.querySelectorAll('input[name="copy_year[]"]');
@@ -535,6 +566,7 @@
                 if (!customValue) {
                     e.preventDefault();
                     otherInput.classList.add('is-invalid');
+                    alert('Error: Please enter a category name for "Other".');
                     return false;
                 }
                 // Find or create the option
@@ -579,18 +611,33 @@
                     addCopyRow(nextCtrl, currentYear);
                 }
             } else if (desired < current) {
-                for (let i = current; i > desired; i--) {
-                    copiesContainer.querySelectorAll('tr')[i-1].remove();
+                // Only allow removal if at least one remains
+                if (desired >= 1) {
+                    for (let i = current; i > desired; i--) {
+                        const rows = copiesContainer.querySelectorAll('tr');
+                        if (rows.length > 0) {
+                            rows[rows.length - 1].remove();
+                        }
+                    }
+                } else {
+                    // Reset to minimum 1
+                    copiesInput.value = 1;
+                    alert('You must have at least one copy.');
                 }
             }
         });
 
         // initialize rows on page load with auto-incremented control numbers
-        const initialCopies = parseInt(copiesInput.value) || 1;
-        const currentYear = new Date().getFullYear().toString();
-        for (let i = 0; i < initialCopies; i++) {
-            const nextCtrl = getNextControlNumber();
-            addCopyRow(nextCtrl, currentYear);
+        try {
+            const initialCopies = parseInt(copiesInput.value) || 1;
+            const currentYear = new Date().getFullYear().toString();
+            for (let i = 0; i < initialCopies; i++) {
+                const nextCtrl = getNextControlNumber();
+                addCopyRow(nextCtrl, currentYear);
+            }
+        } catch (err) {
+            console.error('Error initializing copy rows:', err);
+            alert('Error: Could not initialize copy rows. Please refresh the page.');
         }
 
         // run initial toggle
