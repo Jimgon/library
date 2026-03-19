@@ -227,12 +227,7 @@
                     </p>
                 </div>
                 
-                <form action="<?php echo e(route('books.lost-damage.clear-history')); ?>" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to clear all history logs? This action cannot be undone.');">
-                    <?php echo csrf_field(); ?>
-                    <button type="submit" class="btn btn-sm btn-danger">
-                        <i class="bi bi-trash me-1"></i>Clear History
-                    </button>
-                </form>
+                
             </div>
 
             <div class="table-responsive">
