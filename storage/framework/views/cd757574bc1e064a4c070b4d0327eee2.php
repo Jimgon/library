@@ -51,6 +51,11 @@
             font-weight: 500;
             transition: background 0.15s, color 0.15s;
             margin-bottom: 0.25rem;
+            border: none !important;
+            background: transparent !important;
+            cursor: pointer;
+            text-align: left;
+            width: 100%;
         }
         .sidebar .nav-link i {
             font-size: 1.1rem;
@@ -59,6 +64,14 @@
         .sidebar .nav-link:hover, .sidebar .nav-link.active {
             background: #e0f2fe !important;
             color:  #2563eb!important;
+        }
+        .sidebar .nav-link[aria-expanded="true"] .fa-chevron-down {
+            transform: rotate(180deg);
+            transition: transform 0.3s ease;
+        }
+        .sidebar .nav-link[aria-expanded="false"] .fa-chevron-down {
+            transform: rotate(0deg);
+            transition: transform 0.3s ease;
         }
         .sidebar .nav-link.text-danger {
             color: #dc2626 !important;
@@ -370,6 +383,27 @@
             toastElList.map((toastEl) => {
                 return new bootstrap.Toast(toastEl, { delay: 4000 }).show()
             })
+        });
+
+        // Handle collapse button aria-expanded changes
+        document.addEventListener('DOMContentLoaded', () => {
+            const collapseButtons = document.querySelectorAll('[data-bs-toggle="collapse"]');
+            
+            collapseButtons.forEach(button => {
+                // Update aria-expanded when collapse state changes
+                const targetId = button.getAttribute('data-bs-target');
+                const collapseElement = document.querySelector(targetId);
+                
+                if (collapseElement) {
+                    collapseElement.addEventListener('show.bs.collapse', () => {
+                        button.setAttribute('aria-expanded', 'true');
+                    });
+                    
+                    collapseElement.addEventListener('hide.bs.collapse', () => {
+                        button.setAttribute('aria-expanded', 'false');
+                    });
+                }
+            });
         });
     </script>
     <?php echo $__env->make('components.confirm-modal', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>

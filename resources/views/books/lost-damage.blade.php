@@ -166,6 +166,18 @@
 
                             <td>
                                 <div class="btn-group btn-group-sm" role="group">
+                                    @if($record->type === 'damaged')
+                                        <form action="{{ route('books.lost-damage.repaired', $record->id) }}"
+                                              method="POST"
+                                              class="d-inline"
+                                              onsubmit="return confirm('Mark this item as repaired?');">
+                                            @csrf
+                                            <button class="btn btn-outline-info" type="submit" title="Mark as repaired">
+                                                <i class="bi bi-wrench me-1"></i>Repaired
+                                            </button>
+                                        </form>
+                                    @endif
+
                                     <form action="{{ route('books.lost-damage.return', $record->id) }}"
                                           method="POST"
                                           class="d-inline"
@@ -261,7 +273,7 @@
                             </td>
 
                             <td>
-                                @if($log->action === 'Replaced' || $log->action === 'Returned')
+                                @if($log->action === 'Replaced' || $log->action === 'Returned' || $log->action === 'Repaired')
                                     <span class="badge bg-success">{{ $log->action }}</span>
                                 @else
                                     <span class="badge bg-danger">{{ $log->action }}</span>

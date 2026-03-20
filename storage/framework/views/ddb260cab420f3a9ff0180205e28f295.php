@@ -169,6 +169,18 @@
 
                             <td>
                                 <div class="btn-group btn-group-sm" role="group">
+                                    <?php if($record->type === 'damaged'): ?>
+                                        <form action="<?php echo e(route('books.lost-damage.repaired', $record->id)); ?>"
+                                              method="POST"
+                                              class="d-inline"
+                                              onsubmit="return confirm('Mark this item as repaired?');">
+                                            <?php echo csrf_field(); ?>
+                                            <button class="btn btn-outline-info" type="submit" title="Mark as repaired">
+                                                <i class="bi bi-wrench me-1"></i>Repaired
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
+
                                     <form action="<?php echo e(route('books.lost-damage.return', $record->id)); ?>"
                                           method="POST"
                                           class="d-inline"
@@ -260,7 +272,7 @@
                             </td>
 
                             <td>
-                                <?php if($log->action === 'Replaced' || $log->action === 'Returned'): ?>
+                                <?php if($log->action === 'Replaced' || $log->action === 'Returned' || $log->action === 'Repaired'): ?>
                                     <span class="badge bg-success"><?php echo e($log->action); ?></span>
                                 <?php else: ?>
                                     <span class="badge bg-danger"><?php echo e($log->action); ?></span>

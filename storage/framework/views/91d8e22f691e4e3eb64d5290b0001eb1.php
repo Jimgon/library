@@ -313,6 +313,11 @@
                         <i class="bi bi-stack me-1"></i>Physical Copies <span class="badge bg-secondary ms-2" id="copiesBadge">0</span>
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="repairedTab" data-bs-toggle="tab" data-bs-target="#repairedPane" type="button" role="tab" aria-controls="repairedPane" aria-selected="false">
+                        <i class="bi bi-wrench me-1"></i>Repaired <span class="badge bg-secondary ms-2" id="repairedBadge">0</span>
+                    </button>
+                </li>
             </ul>
 
             <div class="modal-body">
@@ -429,6 +434,26 @@
                                     </tr>
                                 </thead>
                                 <tbody id="copiesTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    
+                    <div class="tab-pane fade" id="repairedPane" role="tabpanel" aria-labelledby="repairedTab">
+                        <div id="noRepairedMessage" class="alert alert-info" style="display: none;">
+                            <i class="bi bi-info-circle me-2"></i>No repaired items
+                        </div>
+                        <div class="table-responsive" id="repairedTableContainer" style="display: none;">
+                            <table class="table table-hover table-sm align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 30%;">Control Number</th>
+                                        <th style="width: 35%;">Originally Reported</th>
+                                        <th style="width: 35%;">Repaired Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="repairedTableBody">
                                 </tbody>
                             </table>
                         </div>
@@ -981,6 +1006,40 @@ document.addEventListener('DOMContentLoaded', function() {
                     copiesTableContainer.style.display = 'none';
                     noCopiesMessage.style.display = 'block';
                     copiesBadge.textContent = '0';
+                }
+
+                // Handle Repaired Items Tab
+                const repairedItems = data.repaired_items || [];
+                const repairedTableBody = document.getElementById('repairedTableBody');
+                const repairedTableContainer = document.getElementById('repairedTableContainer');
+                const noRepairedMessage = document.getElementById('noRepairedMessage');
+                const repairedBadge = document.getElementById('repairedBadge');
+                
+                repairedTableBody.innerHTML = '';
+                repairedBadge.textContent = repairedItems.length;
+                
+                if (repairedItems.length > 0) {
+                    repairedItems.forEach((item) => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>
+                                <strong>${item.copy_number}</strong>
+                            </td>
+                            <td>
+                                <span>${item.original_report_date}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>${item.repaired_date}</span>
+                            </td>
+                        `;
+                        repairedTableBody.appendChild(row);
+                    });
+                    
+                    repairedTableContainer.style.display = 'block';
+                    noRepairedMessage.style.display = 'none';
+                } else {
+                    repairedTableContainer.style.display = 'none';
+                    noRepairedMessage.style.display = 'block';
                 }
 
                 // Update edit button link

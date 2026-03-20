@@ -28,7 +28,6 @@ class Book extends Model
         'condition',
         'copy_status',
         'call_number',
-        'available_copies',
 
         // ✅ NEW Dewey fields
         'dewey_decimal',
@@ -50,6 +49,16 @@ class Book extends Model
     ];
 
     protected $dates = ['deleted_at'];
+
+    /**
+     * Hide the database column so only the accessor is used
+     */
+    protected $hidden = ['available_copies'];
+
+    /**
+     * Force the accessor to be used for available_copies instead of the database column
+     */
+    protected $appends = ['available_copies'];
 
     /**
      * Ensure copy_years is always an array
@@ -74,13 +83,32 @@ class Book extends Model
             ->count();
     }
 
+    /**
+     * Get available copies - calculated dynamically from total, borrowed, and lost
+     */
     public function getAvailableCopiesAttribute()
     {
-    $totalCopies = $this->copies ?? 0;
-    $borrowedCopies = $this->borrowed_copies ?? 0;
-    $lostDamagedCount = count($this->lost_control_numbers ?? []);
-    
-    return $totalCopies - $borrowedCopies - $lostDamagedCount;
+        $totalCopies = (int) ($this->attributes['copies'] ?? 0);
+        
+        // Count borrowed copies
+        if ($this->relationLoaded('borrows')) {
+            // Use the eager-loaded relation
+            $borrowedCopies = 0;
+            foreach ($this->borrows as $borrow) {
+                if (is_null($borrow->returned_at)) {
+                    $borrowedCopies++;
+                }
+            }
+        } else {
+            // Query if not eager-loaded
+            $borrowedCopies = (int) $this->borrows()
+                ->whereNull('returned_at')
+                ->count();
+        }
+        
+        $lostDamagedCount = count($this->lost_control_numbers ?? []);
+        
+        return max(0, $totalCopies - $borrowedCopies - $lostDamagedCount);
     }
 
     /**

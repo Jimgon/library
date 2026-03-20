@@ -615,6 +615,22 @@ class BookController extends Controller
             $copyConditions[] = 'Brand New';
         }
         
+        // Fetch repaired items for this book
+        $repairedItems = LostDamagedItem::where('book_id', $book->id)
+            ->where('status', 'repaired')
+            ->with(['borrow'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function($item) {
+                return [
+                    'copy_number' => $item->borrow?->copy_number ?? $item->copy_number ?? 'N/A',
+                    'repaired_date' => $item->updated_at ? $item->updated_at->format('M d, Y') : 'N/A',
+                    'original_report_date' => $item->created_at ? $item->created_at->format('M d, Y') : 'N/A',
+                ];
+            })
+            ->values()
+            ->toArray();
+        
         // Always return JSON for this endpoint (requested via AJAX/fetch)
         return response()->json([
             'id' => $book->id,
@@ -638,6 +654,7 @@ class BookController extends Controller
             'copy_years' => $copyYears,
             'copy_conditions' => $copyConditions,
             'lost_control_numbers' => $book->lost_control_numbers ?? [],
+            'repaired_items' => $repairedItems,
             'created_at' => $book->created_at,
             'status' => $book->status,
         ], 200);
@@ -1150,6 +1167,62 @@ class BookController extends Controller
         ]);
 
         return redirect()->route('books.lost-damage')->with('success', 'Item marked as replaced.');
+    }
+
+    /**
+     * Mark a damaged item as repaired and restore it to available copies.
+     */
+    public function lostDamagedRepaired(LostDamagedItem $lostDamagedItem)
+    {
+        // Only allow repair for damaged items
+        if ($lostDamagedItem->type !== 'damaged') {
+            return redirect()->route('books.lost-damage')->with('error', 'Only damaged items can be repaired.');
+        }
+
+        // Get the book associated with this item
+        $book = $lostDamagedItem->book;
+        if (!$book) {
+            return redirect()->route('books.lost-damage')->with('error', 'Associated book not found.');
+        }
+
+        // Get control number
+        $controlNumber = $lostDamagedItem->borrow?->copy_number ?? $lostDamagedItem->copy_number;
+
+        // Update the copy status to 'available' in the book's copy_status array
+        if (is_array($book->control_numbers)) {
+            $controlNumbers = $book->control_numbers;
+            $copyStatus = $book->copy_status ?? [];
+
+            // Find the index of this control number
+            $index = array_search($controlNumber, $controlNumbers);
+            if ($index !== false && isset($copyStatus[$index])) {
+                $copyStatus[$index] = 'available';
+                $book->update(['copy_status' => $copyStatus]);
+            }
+        }
+
+        // Increment available_copies
+        $book->update([
+            'available_copies' => ($book->available_copies ?? 0) + 1,
+        ]);
+
+        // Update the lost/damaged item status to 'repaired'
+        $lostDamagedItem->update(['status' => 'repaired']);
+
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action'  => 'Marked as Repaired',
+            'details' => "Damaged book copy (Ctrl#: {$controlNumber}) for '{$book->title}' marked as repaired and restored to inventory.",
+        ]);
+
+        LostDamagedItemHistory::create([
+            'lost_damaged_item_id' => $lostDamagedItem->id,
+            'action' => 'repaired',
+            'remarks' => "Book copy (Ctrl#: {$controlNumber}) marked as repaired and restored to inventory.",
+            'created_by' => Auth::id(),
+        ]);
+
+        return redirect()->route('books.lost-damage')->with('success', 'Damaged item marked as repaired and restored to inventory.');
     }
 
     /**
