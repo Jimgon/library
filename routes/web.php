@@ -46,7 +46,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('books/catalog', [BookController::class, 'catalog'])->name('books.catalog');
     Route::get('books/lost-damage', [BookController::class, 'lostDamage'])->name('books.lost-damage');
     Route::post('books/lost-damage/{lostDamagedItem}/return', [BookController::class, 'lostDamagedReturn'])->name('books.lost-damage.return');
-    Route::post('books/lost-damage/{lostDamagedItem}/replace', [BookController::class, 'lostDamagedReplace'])->name('books.lost-damage.replace');
     Route::post('books/lost-damage/{lostDamagedItem}/repaired', [BookController::class, 'lostDamagedRepaired'])->name('books.lost-damage.repaired');
     Route::post('books/lost-damage/clear-history', [BookController::class, 'clearHistory'])->name('books.lost-damage.clear-history');
 

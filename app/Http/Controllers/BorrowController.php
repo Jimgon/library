@@ -478,8 +478,8 @@ class BorrowController extends Controller
                     'origin' => $borrow->origin,
                 ]);
 
-                // Mark the control number as lost if this book is marked as lost
-                if ($borrow->remark === 'Lost' && $borrow->book) {
+                // Mark the control number as lost/unavailable for both lost and damaged books
+                if ($borrow->book) {
                     $controlNumber = $borrow->copy_number ?? 'BK-' . $borrow->book_id;
                     $borrow->book->markControlNumberAsLost($controlNumber);
                 }

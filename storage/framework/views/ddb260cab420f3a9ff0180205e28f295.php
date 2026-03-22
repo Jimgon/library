@@ -190,16 +190,6 @@
                                             <i class="bi bi-check-circle me-1"></i>Returned
                                         </button>
                                     </form>
-
-                                    <form action="<?php echo e(route('books.lost-damage.replace', $record->id)); ?>"
-                                          method="POST"
-                                          class="d-inline"
-                                          onsubmit="return confirm('Mark this item as replaced?');">
-                                        <?php echo csrf_field(); ?>
-                                        <button class="btn btn-outline-success" type="submit" title="Mark as replaced">
-                                            <i class="bi bi-arrow-repeat me-1"></i>Replaced
-                                        </button>
-                                    </form>
                                 </div>
                             </td>
 
@@ -272,7 +262,7 @@
                             </td>
 
                             <td>
-                                <?php if($log->action === 'Replaced' || $log->action === 'Returned' || $log->action === 'Repaired'): ?>
+                                <?php if($log->action === 'Found' || $log->action === 'Returned' || $log->action === 'Repaired'): ?>
                                     <span class="badge bg-success"><?php echo e($log->action); ?></span>
                                 <?php else: ?>
                                     <span class="badge bg-danger"><?php echo e($log->action); ?></span>

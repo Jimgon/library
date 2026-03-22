@@ -187,16 +187,6 @@
                                             <i class="bi bi-check-circle me-1"></i>Returned
                                         </button>
                                     </form>
-
-                                    <form action="{{ route('books.lost-damage.replace', $record->id) }}"
-                                          method="POST"
-                                          class="d-inline"
-                                          onsubmit="return confirm('Mark this item as replaced?');">
-                                        @csrf
-                                        <button class="btn btn-outline-success" type="submit" title="Mark as replaced">
-                                            <i class="bi bi-arrow-repeat me-1"></i>Replaced
-                                        </button>
-                                    </form>
                                 </div>
                             </td>
 
@@ -273,7 +263,7 @@
                             </td>
 
                             <td>
-                                @if($log->action === 'Replaced' || $log->action === 'Returned' || $log->action === 'Repaired')
+                                @if($log->action === 'Found' || $log->action === 'Returned' || $log->action === 'Repaired')
                                     <span class="badge bg-success">{{ $log->action }}</span>
                                 @else
                                     <span class="badge bg-danger">{{ $log->action }}</span>

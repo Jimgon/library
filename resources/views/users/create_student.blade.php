@@ -70,11 +70,11 @@
                     <div class="col-md-6">
                         <label for="phone_number" class="form-label">Phone Number</label>
                         <input type="tel" class="form-control" id="phone_number" name="phone_number" value="{{ old('phone_number') }}"
-                               placeholder="+63 9XXXXXXXXX"
-                               pattern="^\+63\s?9\d{9}$"
-                               title="Enter Philippine mobile number starting with +63 9 and 10 digits (e.g. +63 9123456789)"
-                               inputmode="tel" maxlength="14"
-                               oninput="this.value = this.value.replace(/[^\d+\s]/g, '')">
+                               placeholder="09XXXXXXXXX"
+                               pattern="^09\d{9}$"
+                               title="Enter Philippine mobile number in format 09XXXXXXXXX (e.g. 09123456789)"
+                               inputmode="tel" maxlength="11"
+                               oninput="this.value = this.value.replace(/\D/g, '').slice(0,11)">
                     </div>
                     <div class="col-md-6">
                         <label for="address" class="form-label">Address</label>

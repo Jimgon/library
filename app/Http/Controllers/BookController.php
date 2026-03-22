@@ -1110,7 +1110,7 @@ class BookController extends Controller
                 
                 return (object) [
                     'type' => $item->type,
-                    'action' => $item->status === 'returned' ? 'Returned' : ($item->status === 'replaced' ? 'Replaced' : ucfirst($item->status)),
+                    'action' => $item->status === 'returned' ? ($item->type === 'lost' ? 'Found' : 'Returned') : ucfirst($item->status),
                     'ctrl_number' => $item->borrow?->copy_number ?? $item->copy_number ?? 'N/A',
                     'book_title' => $item->book ? $item->book->title : 'Unknown',
                     'borrower' => $borrower_name,
@@ -1124,50 +1124,70 @@ class BookController extends Controller
     }
 
     /**
-     * Mark a lost/damaged item as returned.
+     * Mark a lost/damaged item as returned or found.
      */
     public function lostDamagedReturn(LostDamagedItem $lostDamagedItem)
     {
         $lostDamagedItem->update(['status' => 'returned']);
 
-        ActivityLog::create([
-            'user_id' => Auth::id(),
-            'action'  => 'Marked as Returned',
-            'details' => "Lost/damaged item for book '{$lostDamagedItem->book?->title}' marked as returned.",
-        ]);
+        // Determine action label based on item type
+        $isLost = $lostDamagedItem->type === 'lost';
+        $actionLabel = $isLost ? 'Found' : 'Returned';
+        $successMessage = $isLost ? 'Item marked as found.' : 'Item marked as returned.';
+
+        // Restore item to inventory (for both lost and damaged items)
+        $book = $lostDamagedItem->book;
+        if ($book) {
+            // Get control number
+            $controlNumber = $lostDamagedItem->borrow?->copy_number ?? $lostDamagedItem->copy_number;
+
+            // Remove control number from lost_control_numbers to make it available again
+            $lostControlNumbers = $book->lost_control_numbers ?? [];
+            if (in_array($controlNumber, $lostControlNumbers)) {
+                $lostControlNumbers = array_filter($lostControlNumbers, function($ctrl) use ($controlNumber) {
+                    return $ctrl !== $controlNumber;
+                });
+                $book->update(['lost_control_numbers' => array_values($lostControlNumbers)]);
+            }
+
+            // Update the copy status to 'available' in the book's copy_status array
+            if (is_array($book->control_numbers)) {
+                $controlNumbers = $book->control_numbers;
+                $copyStatus = $book->copy_status ?? [];
+
+                // Find the index of this control number
+                $index = array_search($controlNumber, $controlNumbers);
+                if ($index !== false && isset($copyStatus[$index])) {
+                    $copyStatus[$index] = 'available';
+                    $book->update(['copy_status' => $copyStatus]);
+                }
+            }
+
+            $itemType = $isLost ? 'Lost' : 'Damaged';
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'action'  => "Marked as {$actionLabel}",
+                'details' => "{$itemType} book copy (Ctrl#: {$controlNumber}) for '{$book->title}' marked as {$actionLabel} and restored to inventory.",
+            ]);
+        } else {
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'action'  => "Marked as {$actionLabel}",
+                'details' => "Item for book marked as {$actionLabel}.",
+            ]);
+        }
 
         LostDamagedItemHistory::create([
             'lost_damaged_item_id' => $lostDamagedItem->id,
             'action' => 'returned',
-            'remarks' => "Book '{$lostDamagedItem->book?->title}' marked as returned.",
+            'remarks' => "Book '{$lostDamagedItem->book?->title}' marked as {$actionLabel}.",
             'created_by' => Auth::id(),
         ]);
 
-        return redirect()->route('books.lost-damage')->with('success', 'Item marked as returned.');
+        return redirect()->route('books.lost-damage')->with('success', $successMessage);
     }
 
-    /**
-     * Mark a lost/damaged item as replaced.
-     */
-    public function lostDamagedReplace(LostDamagedItem $lostDamagedItem)
-    {
-        $lostDamagedItem->update(['status' => 'replaced']);
 
-        ActivityLog::create([
-            'user_id' => Auth::id(),
-            'action'  => 'Marked as Replaced',
-            'details' => "Lost/damaged item for book '{$lostDamagedItem->book?->title}' marked as replaced.",
-        ]);
-
-        LostDamagedItemHistory::create([
-            'lost_damaged_item_id' => $lostDamagedItem->id,
-            'action' => 'replaced',
-            'remarks' => "Book '{$lostDamagedItem->book?->title}' marked as replaced.",
-            'created_by' => Auth::id(),
-        ]);
-
-        return redirect()->route('books.lost-damage')->with('success', 'Item marked as replaced.');
-    }
 
     /**
      * Mark a damaged item as repaired and restore it to available copies.
@@ -1188,6 +1208,15 @@ class BookController extends Controller
         // Get control number
         $controlNumber = $lostDamagedItem->borrow?->copy_number ?? $lostDamagedItem->copy_number;
 
+        // Remove control number from lost_control_numbers to make it available again
+        $lostControlNumbers = $book->lost_control_numbers ?? [];
+        if (in_array($controlNumber, $lostControlNumbers)) {
+            $lostControlNumbers = array_filter($lostControlNumbers, function($ctrl) use ($controlNumber) {
+                return $ctrl !== $controlNumber;
+            });
+            $book->update(['lost_control_numbers' => array_values($lostControlNumbers)]);
+        }
+
         // Update the copy status to 'available' in the book's copy_status array
         if (is_array($book->control_numbers)) {
             $controlNumbers = $book->control_numbers;
@@ -1200,11 +1229,6 @@ class BookController extends Controller
                 $book->update(['copy_status' => $copyStatus]);
             }
         }
-
-        // Increment available_copies
-        $book->update([
-            'available_copies' => ($book->available_copies ?? 0) + 1,
-        ]);
 
         // Update the lost/damaged item status to 'repaired'
         $lostDamagedItem->update(['status' => 'repaired']);
