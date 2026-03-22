@@ -61,7 +61,7 @@
         </div>
         <!-- Pagination links -->
         <div class="d-flex justify-content-center mt-4">
-            <?php echo e($logs->links()); ?>
+            <?php echo e($logs->appends(request()->query())->links()); ?>
 
         </div>
     <?php else: ?>

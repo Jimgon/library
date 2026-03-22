@@ -240,12 +240,24 @@
                 
                 <td>
                     <?php
-                        $statusClass = 'text-success';
-                        $statusText = 'On Time';
-                        
-                        if ($dueDate && $today->gt($dueDate)) {
-                            $statusClass = 'text-danger';
-                            $statusText = 'Overdue';
+                        // Determine status display
+                        if (!is_null($borrow->returned_at) && $borrow->return_status) {
+                            // Returned with a status
+                            $statusClass = 'text-' . \App\Models\Borrow::getStatusColor($borrow->return_status);
+                            $statusText = \App\Models\Borrow::getStatusLabel($borrow->return_status);
+                        } else if (is_null($borrow->returned_at)) {
+                            // Not yet returned
+                            if ($dueDate && $today->gt($dueDate)) {
+                                $statusClass = 'text-danger';
+                                $statusText = 'Overdue';
+                            } else {
+                                $statusClass = 'text-success';
+                                $statusText = 'On Time';
+                            }
+                        } else {
+                            // Fallback for old records without return_status
+                            $statusClass = 'text-success';
+                            $statusText = 'Returned';
                         }
                     ?>
                     <span class="<?php echo e($statusClass); ?> fw-semibold"><?php echo e($statusText); ?></span>

@@ -115,6 +115,10 @@ class TeacherBorrowController extends Controller
         $borrow->remark = $inputRemark !== '' ? $inputRemark : $computedRemark;
         $borrow->notes = trim(($borrow->notes ? $borrow->notes . "\n" : '') . $request->input('notes', ''));
         
+        // Determine return_status based on remark and due date
+        $returnStatus = $this->determineReturnStatus($borrow->remark, $dueDate, $today);
+        $borrow->return_status = $returnStatus;
+        
         // Record lost or damaged items
         if ($borrow->remark === 'Lost' || $borrow->remark === 'Damage') {
             LostDamagedItem::create([
@@ -148,6 +152,38 @@ class TeacherBorrowController extends Controller
             $borrow->book->save();
         }
         return redirect()->route('books.index')->with('success', 'Book returned successfully!');
+    }
+
+    /**
+     * Determine the return status based on remark and due date
+     *
+     * @param string $remark The return remark
+     * @param \Carbon\Carbon|null $dueDate The due date
+     * @param \Carbon\Carbon $today Current date
+     * @return string The return status
+     */
+    private function determineReturnStatus($remark, $dueDate = null, $today = null)
+    {
+        if (!$today) {
+            $today = \Carbon\Carbon::now();
+        }
+
+        // Check for specific remarks that map to statuses
+        if ($remark === 'Damage') {
+            return Borrow::STATUS_DAMAGED_FOR_REPAIR;
+        }
+
+        if ($remark === 'Lost') {
+            return Borrow::STATUS_LOST_AND_FOUND;
+        }
+
+        // If no due date or already returned, check if it's overdue
+        if ($dueDate && $today->gt($dueDate)) {
+            return Borrow::STATUS_LATE_RETURN;
+        }
+
+        // Default to returned on time
+        return Borrow::STATUS_RETURNED_ON_TIME;
     }
 }
 

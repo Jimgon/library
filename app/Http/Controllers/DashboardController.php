@@ -68,7 +68,7 @@ class DashboardController extends Controller
         ));
     }
 
-    public function reports()
+    public function reports(Request $request)
     {
         // Sample metrics/data for the reports view. Replace with real queries as needed.
         $totalTransactions = Borrow::count();
@@ -122,9 +122,48 @@ class DashboardController extends Controller
             $monthlyData[] = $count;
         }
 
+        // Detailed transactions with pagination and sorting
+        $sortBy = $request->get('sort', 'borrowed_at');
+        $sortOrder = $request->get('order', 'desc');
+        $statusFilter = $request->get('status', 'all');
+
+        // Validate sort parameters for security
+        $sortBy = in_array($sortBy, ['id', 'borrowed_at', 'due_date', 'returned_at']) ? $sortBy : 'borrowed_at';
+        $sortOrder = in_array($sortOrder, ['asc', 'desc']) ? $sortOrder : 'desc';
+
+        $transactionsQuery = Borrow::with(['book'])
+            ->select('borrows.*');
+
+        // Apply status filter
+        if ($statusFilter === 'active') {
+            $transactionsQuery->whereNull('returned_at');
+        } elseif ($statusFilter === 'completed') {
+            $transactionsQuery->whereNotNull('returned_at');
+        }
+
+        // Apply sorting
+        $transactions = $transactionsQuery->orderBy($sortBy, $sortOrder)
+            ->paginate(10, ['*'], 'transactionsPage');
+
+        // Enrich transactions with borrower names
+        $transactions->getCollection()->transform(function ($transaction) {
+            $borrower = $transaction->role === 'teacher' 
+                ? \App\Models\Teacher::withTrashed()->find($transaction->user_id)
+                : \App\Models\User::withTrashed()->find($transaction->user_id);
+            
+            $transaction->borrower_name = $borrower 
+                ? trim(($borrower->first_name ?? '') . ' ' . ($borrower->last_name ?? ''))
+                : 'Unknown';
+            
+            $transaction->borrower_type = $transaction->role === 'teacher' ? 'Teacher' : 'Student';
+            
+            return $transaction;
+        });
+
         return view('reports', compact(
             'totalTransactions','totalStudents','totalTeachers','booksInCirculation','overdueItems',
-            'popularLabels','popularData','categoryLabels','categoryData','monthlyLabels','monthlyData'
+            'popularLabels','popularData','categoryLabels','categoryData','monthlyLabels','monthlyData',
+            'transactions', 'sortBy', 'sortOrder', 'statusFilter'
         ));
     }
 }

@@ -52,17 +52,60 @@ class UtilitiesController extends Controller
     // Logs Page
     public function logs()
     {
-        $logs = ActivityLog::latest()->paginate(20);
+        $query = ActivityLog::latest();
+        
+        // Handle search
+        if (request('search')) {
+            $search = request('search');
+            $query->where('action', 'like', "%{$search}%")
+                  ->orWhere('details', 'like', "%{$search}%");
+        }
+        
+        $logs = $query->paginate(20);
         return view('utilities.activity-log', compact('logs'));
     }
 
     // Archive Page
     public function archive()
     {
-        $books = \App\Models\BookArchive::query()->latest()->paginate(10);
-        $students = User::onlyTrashed()->paginate(10);
-        $staff = SystemUser::onlyTrashed()->paginate(10);
-        $teachers = Teacher::onlyTrashed()->paginate(10);
+        $search = request('q');
+        
+        // Books search and pagination
+        $booksQuery = \App\Models\BookArchive::query()->latest();
+        if ($search) {
+            $booksQuery->where('title', 'like', "%{$search}%")
+                      ->orWhere('author', 'like', "%{$search}%")
+                      ->orWhere('isbn', 'like', "%{$search}%")
+                      ->orWhere('ctrl_number', 'like', "%{$search}%");
+        }
+        $books = $booksQuery->paginate(10, ['*'], 'book_page');
+        
+        // Students search and pagination
+        $studentsQuery = User::onlyTrashed();
+        if ($search) {
+            $studentsQuery->where('first_name', 'like', "%{$search}%")
+                         ->orWhere('last_name', 'like', "%{$search}%")
+                         ->orWhere('email', 'like', "%{$search}%");
+        }
+        $students = $studentsQuery->paginate(10, ['*'], 'student_page');
+        
+        // Staff search and pagination
+        $staffQuery = SystemUser::onlyTrashed();
+        if ($search) {
+            $staffQuery->where('email', 'like', "%{$search}%")
+                      ->orWhere('role', 'like', "%{$search}%");
+        }
+        $staff = $staffQuery->paginate(10, ['*'], 'staff_page');
+        
+        // Teachers search and pagination
+        $teachersQuery = Teacher::onlyTrashed();
+        if ($search) {
+            $teachersQuery->where('name', 'like', "%{$search}%")
+                         ->orWhere('email', 'like', "%{$search}%")
+                         ->orWhere('first_name', 'like', "%{$search}%")
+                         ->orWhere('last_name', 'like', "%{$search}%");
+        }
+        $teachers = $teachersQuery->paginate(10, ['*'], 'teacher_page');
 
         return view('utilities.archive', compact('books', 'students', 'staff', 'teachers'));
     }

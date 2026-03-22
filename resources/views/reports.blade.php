@@ -72,6 +72,179 @@
             </div>
         </div>
     </div>
+
+    <!-- Detailed Transactions Section -->
+    <div class="row g-3 mt-4">
+        <div class="col-lg-12">
+            <div class="p-3 rounded shadow-sm bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">All Transactions</h5>
+                    <div class="small text-muted">Total: {{ $totalTransactions }}</div>
+                </div>
+
+                <!-- Filter and Sort Controls -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <form id="filterForm" class="d-flex gap-2">
+                            <select id="statusFilter" name="status" class="form-select form-select-sm" style="max-width:150px;">
+                                <option value="all" {{ $statusFilter === 'all' ? 'selected' : '' }}>All Status</option>
+                                <option value="active" {{ $statusFilter === 'active' ? 'selected' : '' }}>Active (Borrowed)</option>
+                                <option value="completed" {{ $statusFilter === 'completed' ? 'selected' : '' }}>Completed (Returned)</option>
+                            </select>
+
+                            <select id="sortBy" name="sort" class="form-select form-select-sm" style="max-width:140px;">
+                                <option value="borrowed_at" {{ $sortBy === 'borrowed_at' ? 'selected' : '' }}>Sort by Date Borrowed</option>
+                                <option value="due_date" {{ $sortBy === 'due_date' ? 'selected' : '' }}>Sort by Due Date</option>
+                                <option value="returned_at" {{ $sortBy === 'returned_at' ? 'selected' : '' }}>Sort by Return Date</option>
+                                <option value="id" {{ $sortBy === 'id' ? 'selected' : '' }}>Sort by ID</option>
+                            </select>
+
+                            <select id="sortOrder" name="order" class="form-select form-select-sm" style="max-width:110px;">
+                                <option value="desc" {{ $sortOrder === 'desc' ? 'selected' : '' }}>Newest First</option>
+                                <option value="asc" {{ $sortOrder === 'asc' ? 'selected' : '' }}>Oldest First</option>
+                            </select>
+
+                            <button type="button" id="applyFilterBtn" class="btn btn-sm btn-outline-secondary">Apply</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Transactions Table -->
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 80px;">Txn ID</th>
+                                <th style="width: 140px;">Borrower</th>
+                                <th style="width: 180px;">Book Title</th>
+                                <th style="width: 100px;">Date Borrowed</th>
+                                <th style="width: 100px;">Due Date</th>
+                                <th style="width: 85px;">Type</th>
+                                <th style="width: 100px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($transactions as $transaction)
+                                @php
+                                    // Determine status display
+                                    $isOverdue = is_null($transaction->returned_at) && \Carbon\Carbon::parse($transaction->due_date)->isPast();
+                                    
+                                    // If transaction has a return_status, use it; otherwise, compute based on returned_at
+                                    if (!is_null($transaction->returned_at) && $transaction->return_status) {
+                                        $statusText = $transaction->return_status;
+                                        $statusLabel = \App\Models\Borrow::getStatusLabel($statusText);
+                                        $statusClass = \App\Models\Borrow::getStatusColor($statusText);
+                                    } else if (is_null($transaction->returned_at)) {
+                                        $statusLabel = $isOverdue ? 'Overdue' : 'Active';
+                                        $statusClass = $isOverdue ? 'danger' : 'warning';
+                                        $statusText = '';
+                                    } else {
+                                        // Fallback for old records without return_status
+                                        $statusLabel = 'Returned';
+                                        $statusClass = 'success';
+                                        $statusText = '';
+                                    }
+                                @endphp
+                                <tr>
+                                    <td><span class="badge bg-light text-dark">{{ $transaction->id }}</span></td>
+                                    <td>
+                                        <small title="{{ $transaction->borrower_type }}">{{ $transaction->borrower_name ?: 'Unknown' }}</small>
+                                    </td>
+                                    <td>
+                                        <small>{{ $transaction->book->title ?? 'Deleted Book' }}</small>
+                                    </td>
+                                    <td>
+                                        <small>{{ $transaction->borrowed_at->format('M d, Y') }}</small>
+                                    </td>
+                                    <td>
+                                        <small>{{ $transaction->due_date->format('M d, Y') }}</small>
+                                    </td>
+                                    <td>
+                                        @if(is_null($transaction->returned_at))
+                                            <span class="badge bg-primary">Borrow</span>
+                                        @else
+                                            <span class="badge bg-secondary">Return</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ $statusClass }}">{{ $statusLabel }}</span>
+                                        @if($transaction->return_status === 'damaged_for_repair')
+                                            <i class="bi bi-exclamation-circle" title="Marked for Repair"></i>
+                                        @elseif($transaction->return_status === 'lost_and_found')
+                                            <i class="bi bi-question-circle" title="Lost Item"></i>
+                                        @elseif($transaction->return_status === 'late_return')
+                                            <i class="bi bi-clock" title="Late Return"></i>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-3">
+                                        <small>No transactions found.</small>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Custom Pagination -->
+                <div class="d-flex justify-content-between align-items-center mt-3 gap-2">
+                    <div class="text-muted small">
+                        Showing {{ $transactions->firstItem() ?? 0 }} to {{ $transactions->lastItem() ?? 0 }} of {{ $transactions->total() }} results
+                    </div>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm mb-0">
+                            {{-- Previous Page Link --}}
+                            @if ($transactions->onFirstPage())
+                                <li class="page-item disabled">
+                                    <span class="page-link" aria-label="Previous">
+                                        <span aria-hidden="true">&lsaquo;</span> Previous
+                                    </span>
+                                </li>
+                            @else
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ $transactions->appends(request()->query())->previousPageUrl() }}" rel="prev" aria-label="Previous">
+                                        <span aria-hidden="true">&lsaquo;</span> Previous
+                                    </a>
+                                </li>
+                            @endif
+
+                            {{-- Pagination Elements --}}
+                            @foreach ($transactions->getUrlRange(1, $transactions->lastPage()) as $page => $url)
+                                @if ($page == $transactions->currentPage())
+                                    <li class="page-item active" aria-current="page">
+                                        <span class="page-link">
+                                            {{ $page }}
+                                        </span>
+                                    </li>
+                                @else
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ $url }}">{{ $page }}</a>
+                                    </li>
+                                @endif
+                            @endforeach
+
+                            {{-- Next Page Link --}}
+                            @if ($transactions->hasMorePages())
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ $transactions->appends(request()->query())->nextPageUrl() }}" rel="next" aria-label="Next">
+                                        Next <span aria-hidden="true">&rsaquo;</span>
+                                    </a>
+                                </li>
+                            @else
+                                <li class="page-item disabled">
+                                    <span class="page-link" aria-label="Next">
+                                        Next <span aria-hidden="true">&rsaquo;</span>
+                                    </span>
+                                </li>
+                            @endif
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 @php
     // Monochrome defaults for a clean black & white dashboard look
@@ -142,6 +315,99 @@
             options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
         });
     }
+</script>
+
+<script>
+    // AJAX-based filtering without page refresh
+    document.getElementById('applyFilterBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        const status = document.getElementById('statusFilter').value;
+        const sort = document.getElementById('sortBy').value;
+        const order = document.getElementById('sortOrder').value;
+        
+        // Build URL with query parameters
+        const url = new URL(window.location);
+        url.searchParams.set('status', status);
+        url.searchParams.set('sort', sort);
+        url.searchParams.set('order', order);
+        
+        // Fetch filtered data
+        fetch(url.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            // Parse the response HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Extract and update the transactions table
+            const newTable = doc.querySelector('table tbody');
+            const newPagination = doc.querySelector('.d-flex.justify-content-between.align-items-center.mt-3.gap-2');
+            
+            if (newTable) {
+                document.querySelector('table tbody').innerHTML = newTable.innerHTML;
+            }
+            
+            if (newPagination) {
+                document.querySelector('.d-flex.justify-content-between.align-items-center.mt-3.gap-2').innerHTML = newPagination.innerHTML;
+                
+                // Re-attach pagination click handlers
+                attachPaginationHandlers();
+            }
+            
+            // Update URL without page refresh
+            window.history.replaceState(null, '', url.toString());
+        })
+        .catch(error => console.error('Filter error:', error));
+    });
+
+    // Handle pagination links without page refresh
+    function attachPaginationHandlers() {
+        document.querySelectorAll('.pagination a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const url = this.href;
+                
+                // Fetch paginated data
+                fetch(url, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    
+                    const newTable = doc.querySelector('table tbody');
+                    const newPagination = doc.querySelector('.d-flex.justify-content-between.align-items-center.mt-3.gap-2');
+                    
+                    if (newTable) {
+                        document.querySelector('table tbody').innerHTML = newTable.innerHTML;
+                    }
+                    
+                    if (newPagination) {
+                        document.querySelector('.d-flex.justify-content-between.align-items-center.mt-3.gap-2').innerHTML = newPagination.innerHTML;
+                        attachPaginationHandlers();
+                    }
+                    
+                    window.history.replaceState(null, '', url);
+                    
+                    // Scroll to table
+                    document.querySelector('table').scrollIntoView({ behavior: 'smooth' });
+                })
+                .catch(error => console.error('Pagination error:', error));
+            });
+        });
+    }
+
+    // Initialize pagination handlers on page load
+    attachPaginationHandlers();
 </script>
 
 @endsection

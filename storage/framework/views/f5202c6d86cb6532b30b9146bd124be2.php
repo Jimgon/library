@@ -70,6 +70,180 @@
             </div>
         </div>
     </div>
+
+    <!-- Detailed Transactions Section -->
+    <div class="row g-3 mt-4">
+        <div class="col-lg-12">
+            <div class="p-3 rounded shadow-sm bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">All Transactions</h5>
+                    <div class="small text-muted">Total: <?php echo e($totalTransactions); ?></div>
+                </div>
+
+                <!-- Filter and Sort Controls -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <form id="filterForm" class="d-flex gap-2">
+                            <select id="statusFilter" name="status" class="form-select form-select-sm" style="max-width:150px;">
+                                <option value="all" <?php echo e($statusFilter === 'all' ? 'selected' : ''); ?>>All Status</option>
+                                <option value="active" <?php echo e($statusFilter === 'active' ? 'selected' : ''); ?>>Active (Borrowed)</option>
+                                <option value="completed" <?php echo e($statusFilter === 'completed' ? 'selected' : ''); ?>>Completed (Returned)</option>
+                            </select>
+
+                            <select id="sortBy" name="sort" class="form-select form-select-sm" style="max-width:140px;">
+                                <option value="borrowed_at" <?php echo e($sortBy === 'borrowed_at' ? 'selected' : ''); ?>>Sort by Date Borrowed</option>
+                                <option value="due_date" <?php echo e($sortBy === 'due_date' ? 'selected' : ''); ?>>Sort by Due Date</option>
+                                <option value="returned_at" <?php echo e($sortBy === 'returned_at' ? 'selected' : ''); ?>>Sort by Return Date</option>
+                                <option value="id" <?php echo e($sortBy === 'id' ? 'selected' : ''); ?>>Sort by ID</option>
+                            </select>
+
+                            <select id="sortOrder" name="order" class="form-select form-select-sm" style="max-width:110px;">
+                                <option value="desc" <?php echo e($sortOrder === 'desc' ? 'selected' : ''); ?>>Newest First</option>
+                                <option value="asc" <?php echo e($sortOrder === 'asc' ? 'selected' : ''); ?>>Oldest First</option>
+                            </select>
+
+                            <button type="button" id="applyFilterBtn" class="btn btn-sm btn-outline-secondary">Apply</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Transactions Table -->
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 80px;">Txn ID</th>
+                                <th style="width: 140px;">Borrower</th>
+                                <th style="width: 180px;">Book Title</th>
+                                <th style="width: 100px;">Date Borrowed</th>
+                                <th style="width: 100px;">Due Date</th>
+                                <th style="width: 85px;">Type</th>
+                                <th style="width: 100px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php $__empty_1 = true; $__currentLoopData = $transactions; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $transaction): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                                <?php
+                                    // Determine status display
+                                    $isOverdue = is_null($transaction->returned_at) && \Carbon\Carbon::parse($transaction->due_date)->isPast();
+                                    
+                                    // If transaction has a return_status, use it; otherwise, compute based on returned_at
+                                    if (!is_null($transaction->returned_at) && $transaction->return_status) {
+                                        $statusText = $transaction->return_status;
+                                        $statusLabel = \App\Models\Borrow::getStatusLabel($statusText);
+                                        $statusClass = \App\Models\Borrow::getStatusColor($statusText);
+                                    } else if (is_null($transaction->returned_at)) {
+                                        $statusLabel = $isOverdue ? 'Overdue' : 'Active';
+                                        $statusClass = $isOverdue ? 'danger' : 'warning';
+                                        $statusText = '';
+                                    } else {
+                                        // Fallback for old records without return_status
+                                        $statusLabel = 'Returned';
+                                        $statusClass = 'success';
+                                        $statusText = '';
+                                    }
+                                ?>
+                                <tr>
+                                    <td><span class="badge bg-light text-dark"><?php echo e($transaction->id); ?></span></td>
+                                    <td>
+                                        <small title="<?php echo e($transaction->borrower_type); ?>"><?php echo e($transaction->borrower_name ?: 'Unknown'); ?></small>
+                                    </td>
+                                    <td>
+                                        <small><?php echo e($transaction->book->title ?? 'Deleted Book'); ?></small>
+                                    </td>
+                                    <td>
+                                        <small><?php echo e($transaction->borrowed_at->format('M d, Y')); ?></small>
+                                    </td>
+                                    <td>
+                                        <small><?php echo e($transaction->due_date->format('M d, Y')); ?></small>
+                                    </td>
+                                    <td>
+                                        <?php if(is_null($transaction->returned_at)): ?>
+                                            <span class="badge bg-primary">Borrow</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary">Return</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-<?php echo e($statusClass); ?>"><?php echo e($statusLabel); ?></span>
+                                        <?php if($transaction->return_status === 'damaged_for_repair'): ?>
+                                            <i class="bi bi-exclamation-circle" title="Marked for Repair"></i>
+                                        <?php elseif($transaction->return_status === 'lost_and_found'): ?>
+                                            <i class="bi bi-question-circle" title="Lost Item"></i>
+                                        <?php elseif($transaction->return_status === 'late_return'): ?>
+                                            <i class="bi bi-clock" title="Late Return"></i>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-3">
+                                        <small>No transactions found.</small>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Custom Pagination -->
+                <div class="d-flex justify-content-between align-items-center mt-3 gap-2">
+                    <div class="text-muted small">
+                        Showing <?php echo e($transactions->firstItem() ?? 0); ?> to <?php echo e($transactions->lastItem() ?? 0); ?> of <?php echo e($transactions->total()); ?> results
+                    </div>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm mb-0">
+                            
+                            <?php if($transactions->onFirstPage()): ?>
+                                <li class="page-item disabled">
+                                    <span class="page-link" aria-label="Previous">
+                                        <span aria-hidden="true">&lsaquo;</span> Previous
+                                    </span>
+                                </li>
+                            <?php else: ?>
+                                <li class="page-item">
+                                    <a class="page-link" href="<?php echo e($transactions->appends(request()->query())->previousPageUrl()); ?>" rel="prev" aria-label="Previous">
+                                        <span aria-hidden="true">&lsaquo;</span> Previous
+                                    </a>
+                                </li>
+                            <?php endif; ?>
+
+                            
+                            <?php $__currentLoopData = $transactions->getUrlRange(1, $transactions->lastPage()); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $page => $url): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <?php if($page == $transactions->currentPage()): ?>
+                                    <li class="page-item active" aria-current="page">
+                                        <span class="page-link">
+                                            <?php echo e($page); ?>
+
+                                        </span>
+                                    </li>
+                                <?php else: ?>
+                                    <li class="page-item">
+                                        <a class="page-link" href="<?php echo e($url); ?>"><?php echo e($page); ?></a>
+                                    </li>
+                                <?php endif; ?>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+
+                            
+                            <?php if($transactions->hasMorePages()): ?>
+                                <li class="page-item">
+                                    <a class="page-link" href="<?php echo e($transactions->appends(request()->query())->nextPageUrl()); ?>" rel="next" aria-label="Next">
+                                        Next <span aria-hidden="true">&rsaquo;</span>
+                                    </a>
+                                </li>
+                            <?php else: ?>
+                                <li class="page-item disabled">
+                                    <span class="page-link" aria-label="Next">
+                                        Next <span aria-hidden="true">&rsaquo;</span>
+                                    </span>
+                                </li>
+                            <?php endif; ?>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 <?php
     // Monochrome defaults for a clean black & white dashboard look
@@ -140,6 +314,99 @@
             options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
         });
     }
+</script>
+
+<script>
+    // AJAX-based filtering without page refresh
+    document.getElementById('applyFilterBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        const status = document.getElementById('statusFilter').value;
+        const sort = document.getElementById('sortBy').value;
+        const order = document.getElementById('sortOrder').value;
+        
+        // Build URL with query parameters
+        const url = new URL(window.location);
+        url.searchParams.set('status', status);
+        url.searchParams.set('sort', sort);
+        url.searchParams.set('order', order);
+        
+        // Fetch filtered data
+        fetch(url.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            // Parse the response HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Extract and update the transactions table
+            const newTable = doc.querySelector('table tbody');
+            const newPagination = doc.querySelector('.d-flex.justify-content-between.align-items-center.mt-3.gap-2');
+            
+            if (newTable) {
+                document.querySelector('table tbody').innerHTML = newTable.innerHTML;
+            }
+            
+            if (newPagination) {
+                document.querySelector('.d-flex.justify-content-between.align-items-center.mt-3.gap-2').innerHTML = newPagination.innerHTML;
+                
+                // Re-attach pagination click handlers
+                attachPaginationHandlers();
+            }
+            
+            // Update URL without page refresh
+            window.history.replaceState(null, '', url.toString());
+        })
+        .catch(error => console.error('Filter error:', error));
+    });
+
+    // Handle pagination links without page refresh
+    function attachPaginationHandlers() {
+        document.querySelectorAll('.pagination a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const url = this.href;
+                
+                // Fetch paginated data
+                fetch(url, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    
+                    const newTable = doc.querySelector('table tbody');
+                    const newPagination = doc.querySelector('.d-flex.justify-content-between.align-items-center.mt-3.gap-2');
+                    
+                    if (newTable) {
+                        document.querySelector('table tbody').innerHTML = newTable.innerHTML;
+                    }
+                    
+                    if (newPagination) {
+                        document.querySelector('.d-flex.justify-content-between.align-items-center.mt-3.gap-2').innerHTML = newPagination.innerHTML;
+                        attachPaginationHandlers();
+                    }
+                    
+                    window.history.replaceState(null, '', url);
+                    
+                    // Scroll to table
+                    document.querySelector('table').scrollIntoView({ behavior: 'smooth' });
+                })
+                .catch(error => console.error('Pagination error:', error));
+            });
+        });
+    }
+
+    // Initialize pagination handlers on page load
+    attachPaginationHandlers();
 </script>
 
 <?php $__env->stopSection(); ?>

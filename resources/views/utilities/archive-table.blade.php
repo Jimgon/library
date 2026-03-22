@@ -123,6 +123,15 @@
 
     <!-- Pagination -->
     <div class="d-flex justify-content-center mt-3">
+        @php
+            $pageName = match($type) {
+                'book' => 'book_page',
+                'student' => 'student_page',
+                'teacher' => 'teacher_page',
+                'staff' => 'staff_page',
+                default => 'page'
+            };
+        @endphp
         {{ $items->appends(request()->query())->links() }}
     </div>
     
@@ -189,7 +198,10 @@
                     if(selected.length === 0) return alert('Please select at least one item to restore.');
                     if(!confirm(`Restore ${selected.length} selected {{ $type }}(s)?`)) return;
                     restoreBtn.disabled = true; restoreBtn.textContent = 'Processing...';
-                    submitSequential(selected, 'PATCH').then(result => { alert(`Restored: ${result.success}, Failed: ${result.failed}`); window.location.reload(); });
+                    submitSequential(selected, 'PATCH').then(result => { 
+                        alert(`Restored: ${result.success}, Failed: ${result.failed}`); 
+                        setTimeout(() => location.replace(location.href), 300);
+                    });
                 });
             }
 
@@ -199,7 +211,10 @@
                     if(selected.length === 0) return alert('Please select at least one item to delete.');
                     if(!confirm(`Permanently delete ${selected.length} selected {{ $type }}(s)? This cannot be undone.`)) return;
                     deleteBtn.disabled = true; deleteBtn.textContent = 'Processing...';
-                    submitSequential(selected, 'DELETE').then(result => { alert(`Deleted: ${result.success}, Failed: ${result.failed}`); window.location.reload(); });
+                    submitSequential(selected, 'DELETE').then(result => { 
+                        alert(`Deleted: ${result.success}, Failed: ${result.failed}`); 
+                        setTimeout(() => location.replace(location.href), 300);
+                    });
                 });
             }
         })();

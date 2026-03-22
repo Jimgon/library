@@ -61,7 +61,7 @@
         </div>
         <!-- Pagination links -->
         <div class="d-flex justify-content-center mt-4">
-            {{ $logs->links() }}
+            {{ $logs->appends(request()->query())->links() }}
         </div>
     @else
         <div class="alert alert-info rounded shadow-sm border">No activity logs found.</div>
