@@ -461,14 +461,13 @@
                 </div>
             </div>
             <div class="modal-footer border-0">
+                <button type="button" id="printBookBtn" class="btn btn-outline-secondary">
+                    <i class="bi bi-printer me-1"></i>Print
+                </button>
+
                 <a href="#" id="editBookBtn" class="btn btn-primary">
                     <i class="bi bi-pencil me-1"></i>Edit
                 </a>
-
-                    <button type="button" id="printBookBtn" class="btn btn-outline-secondary">
-                        <i class="bi bi-printer me-1"></i>Print
-                    </button>
-        
 
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="bi bi-arrow-left me-1"></i>Close
@@ -574,6 +573,12 @@
         padding: 0.375rem 0.75rem;
     }
 
+    /* Table scrollbar styles */
+    .table-responsive {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
     /* Tab navigation styles */
     .nav-tabs {
         background-color: #f8f9fa;
@@ -616,6 +621,20 @@
     /* Modal improvements */
     .modal-body {
         padding: 1.5rem;
+    }
+
+    #viewBookModal .modal-footer {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    #viewBookModal .modal-footer #printBookBtn {
+        order: -1;
+    }
+
+    #viewBookModal .modal-footer .btn-secondary {
+        margin-left: auto;
     }
 
     .tab-content {
