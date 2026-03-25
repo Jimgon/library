@@ -184,19 +184,21 @@
                             <td class="d-none d-md-table-cell"><small>{{ $book->isbn }}</small></td>
                             <td class="d-none d-lg-table-cell">
                                 @php
-                                    $avail = $book->available_copies ?? $book->copies ?? 0;
-                                    $total = $book->copies ?? 0;
+                                    // Get accurate counts from the book model accessors
+                                    $available = $book->available_copies;
+                                    $total = $book->total_copies;
                                 @endphp
-                                {{ $avail }}/{{ $total }}
+                                {{ $available }}/{{ $total }}
                             </td>
                             <td>
                                 @php
-                                    $copies = $book->copies ?? 0;
-                                    $avail = $book->available_copies ?? null;
+                                    // Get accurate counts from the book model accessors
+                                    $total = $book->total_copies;
+                                    $available = $book->available_copies;
                                 @endphp
-                                @if($copies == 0 || ($avail !== null && $avail == 0))
+                                @if($total == 0 || $available == 0)
                                     <span class="badge bg-danger text-white">Out of Stock</span>
-                                @elseif(($avail !== null && $avail > 0) || ($avail === null && $copies > 0))
+                                @elseif($available > 0)
                                     <span class="badge bg-success text-white">Available</span>
                                 @elseif(isset($book->status) && trim($book->status) !== '')
                                     <span class="badge bg-secondary">{{ ucfirst($book->status) }}</span>
@@ -221,7 +223,8 @@
                                         data-book-source-of-funds="{{ $book->source_of_funds ?? '-' }}"
                                         data-book-purchase-price="{{ $book->purchase_price ? '₱' . number_format($book->purchase_price, 2) : '-' }}"
                                         data-book-cost-price="{{ isset($book->cost_price) && $book->cost_price !== null ? '₱' . number_format($book->cost_price, 2) : '-' }}"
-                                        data-book-copies="{{ $book->copies ?? 0 }}" data-book-available-copies="{{ $book->available_copies ?? 0 }}"
+                                        data-book-total-copies="{{ $book->total_copies }}" 
+                                        data-book-available-copies="{{ $book->available_copies }}"
                                         data-book-control-numbers='@json($book->control_numbers ?? [])'
                                         data-book-copy-status='@json($book->copy_status ?? [])'
                                         data-book-copy-years='@json($book->copy_years ?? [])'
@@ -784,13 +787,13 @@ document.addEventListener('DOMContentLoaded', function() {
     deleteSelectedBtnBottom.addEventListener('click', performDelete);
 
     // Delete Copy Function
-    function deleteCopy(bookId, copyIndex) {
+    function deleteCopy(bookId, controlNumber) {
         if (!confirm('Are you sure you want to delete this copy?')) {
             return;
         }
 
         const formData = new FormData();
-        formData.append('copy_index', copyIndex);
+        formData.append('control_number', controlNumber);
 
         fetch(`/books/${bookId}/delete-copy`, {
             method: 'POST',
@@ -935,7 +938,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <span class="badge ${badgeClass}">${status}</span>
                                 </td>
                                 <td>
-                                    <button type="button" class="btn btn-sm btn-outline-danger deleteCopyBtn" data-book-id="${bookId}" data-copy-index="${index}" title="Delete copy">
+                                    <button type="button" class="btn btn-sm btn-outline-danger deleteCopyBtn" data-book-id="${bookId}" data-control-number="${cn}" title="Delete copy">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
@@ -985,8 +988,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     copiesTableBody.querySelectorAll('.deleteCopyBtn:not(:disabled)').forEach(btn => {
                         btn.addEventListener('click', function() {
                             const bookId = this.getAttribute('data-book-id');
-                            const copyIndex = this.getAttribute('data-copy-index');
-                            deleteCopy(bookId, copyIndex);
+                            const controlNumber = this.getAttribute('data-control-number');
+                            deleteCopy(bookId, controlNumber);
                         });
                     });
                     

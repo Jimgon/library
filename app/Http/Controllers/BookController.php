@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Book;
+use App\Models\BookCopy;
 use App\Models\DistributedBook;
 use App\Models\ActivityLog;
 use App\Models\LostDamagedItem;
@@ -46,51 +47,44 @@ class BookController extends Controller
 
         $book = Book::findOrFail($bookId);
 
-        // if (!$book) {
-        //     return response()->json(['error' => 'Book not found'], 404);
-        // }
-
         $additionalCopies = $request->input('additional_copies');
-        $currentCopies = $book->copies ?? 0;
-        $newTotal = $currentCopies + $additionalCopies;
+        $submittedYears = $request->input('copy_years', []);
 
-        // Generate new control numbers for the additional copies
+        // Get existing copies to determine the next control number
+        $existingCopies = $book->copies()->count();
         $newControlNumbers = $book->control_numbers ?? [];
         
         // Extract the base from existing control numbers
         $baseNumber = '001'; // default
         if (!empty($newControlNumbers) && is_array($newControlNumbers)) {
-            $firstCtrl = $newControlNumbers[0];
-            $parts = explode('-', $firstCtrl);
-            if (count($parts) === 2) {
-                $baseNumber = $parts[0];
+            $firstCtrl = $newControlNumbers[0] ?? null;
+            if ($firstCtrl) {
+                $parts = explode('-', $firstCtrl);
+                if (count($parts) === 2) {
+                    $baseNumber = $parts[0];
+                }
             }
         }
         
-        // Generate new control numbers for the additional copies using the same base
+        // Create new BookCopy records
         for ($i = 0; $i < $additionalCopies; $i++) {
-            $nextSuffix = count($newControlNumbers) + 1;
-            $newControlNumbers[] = $baseNumber . '-' . str_pad($nextSuffix, 3, '0', STR_PAD_LEFT);
+            $nextSuffix = $existingCopies + $i + 1;
+            $controlNumber = $baseNumber . '-' . str_pad($nextSuffix, 3, '0', STR_PAD_LEFT);
+            $acquisitionYear = $submittedYears[$i] ?? null;
+            
+            BookCopy::create([
+                'book_id' => $book->id,
+                'control_number' => $controlNumber,
+                'acquisition_year' => $acquisitionYear,
+                'status' => 'available',
+                'condition' => null,
+                'is_lost_damaged' => false,
+            ]);
         }
 
-        // Handle copy years
-        $existingYears = $book->copy_years ?? [];
-        $submittedYears = $request->input('copy_years', []);
-        $newYears = array_merge($existingYears, array_slice($submittedYears, 0, $additionalCopies));
-        
-        // Fill missing years with null
-        while (count($newYears) < $newTotal) {
-            $newYears[] = null;
-        }
-
-        // Update book with new copies and control numbers
-        $book->update([
-            'copies' => $newTotal,
-            'available_copies' => ($book->available_copies ?? 0) + $additionalCopies,
-            'control_numbers' => $newControlNumbers,
-            'copy_years' => $newYears,
-        ]);
-        $book->save();
+        // Update the book's total copies count
+        $newTotal = $existingCopies + $additionalCopies;
+        $book->update(['copies' => $newTotal]);
 
         // Log activity
         ActivityLog::create([
@@ -110,80 +104,50 @@ class BookController extends Controller
      */
     public function deleteCopy(Request $request, $bookId)
     {
-        Log::info('DeleteCopy called', [
-            'book_id' => $bookId,
-            'request' => $request->all(),
-        ]);
         $request->validate([
-            'copy_index' => 'required|integer|min:0',
+            'control_number' => 'required|string',
         ]);
 
         $book = Book::findOrFail($bookId);
+        $controlNumber = $request->input('control_number');
 
-        // if (!$book) {
-        //     Log::error('Book not found', ['book_id' => $bookId]);
-        //     return response()->json(['error' => 'Book not found'], 404);
-        // }
+        // Find and delete the BookCopy record
+        $bookCopy = $book->getCopyByControlNumber($controlNumber);
 
-        $copyIndex = $request->input('copy_index');
-        $controlNumbers = $book->control_numbers ?? [];
-        $copyYears = $book->copy_years ?? [];
-        $copyStatus = $book->copy_status ?? [];
-        $copyConditions = $book->copy_conditions ?? [];
-
-        Log::info('DeleteCopy arrays', [
-            'copy_index' => $copyIndex,
-            'control_numbers' => $controlNumbers,
-            'copy_years' => $copyYears,
-            'copy_status' => $copyStatus,
-            'copy_conditions' => $copyConditions,
-        ]);
-
-        // Check if copy exists
-        if (!isset($controlNumbers[$copyIndex])) {
-            Log::error('Copy not found at index', ['copy_index' => $copyIndex, 'control_numbers' => $controlNumbers]);
-            return response()->json(['error' => 'Copy not found'], 404);
+        if (!$bookCopy) {
+            Log::error('BookCopy not found', [
+                'book_id' => $bookId,
+                'control_number' => $controlNumber,
+            ]);
+            return response()->json([
+                'success' => false,
+                'error' => 'Copy not found'
+            ], 404);
         }
 
-        // Archive the copy before removing
+        // Archive the copy before deleting
         BookArchive::create([
             'title' => $book->title,
             'author' => $book->author,
             'isbn' => $book->isbn,
             'publisher' => $book->publisher,
-            'year' => $copyYears[$copyIndex] ?? null,
-            'ctrl_number' => $controlNumbers[$copyIndex] ?? null,
-            'condition' => $copyConditions[$copyIndex] ?? null,
+            'year' => $bookCopy->acquisition_year,
+            'ctrl_number' => $bookCopy->control_number,
+            'condition' => $bookCopy->condition,
         ]);
 
-        // Remove the copy at the specified index
-        $removedCtrl = $controlNumbers[$copyIndex];
-        unset($controlNumbers[$copyIndex]);
-        unset($copyYears[$copyIndex]);
-        unset($copyStatus[$copyIndex]);
-        unset($copyConditions[$copyIndex]);
+        // Delete the copy
+        $bookCopy->delete();
 
-        // Re-index arrays
-        $controlNumbers = array_values($controlNumbers);
-        $copyYears = array_values($copyYears);
-        $copyStatus = array_values($copyStatus);
-        $copyConditions = array_values($copyConditions);
-
-        // Update book
-        $book->update([
-            'copies' => max(0, ($book->copies ?? 0) - 1),
-            'available_copies' => max(0, ($book->available_copies ?? 0) - 1),
-            'control_numbers' => $controlNumbers,
-            'copy_years' => $copyYears,
-            'copy_status' => $copyStatus,
-            'copy_conditions' => $copyConditions,
-        ]);
+        // Update book's total copies count
+        $newCopiesCount = $book->copies()->count();
+        $book->update(['copies' => $newCopiesCount]);
 
         // Log activity
         ActivityLog::create([
             'user_id' => Auth::id(),
             'action'  => 'Deleted Copy from Book',
-            'details' => "Deleted copy {$removedCtrl} from '{$book->title}' (Remaining: {$book->copies}) and archived it.",
+            'details' => "Deleted copy {$controlNumber} from '{$book->title}' (Remaining: {$newCopiesCount}) and archived it.",
         ]);
 
         return response()->json([
@@ -819,6 +783,18 @@ class BookController extends Controller
             'source_of_funds' => $request->source_of_funds,
         ]);
 
+        // Create BookCopy records for each control number (normalized structure)
+        foreach ($controlNumbers as $index => $controlNumber) {
+            BookCopy::create([
+                'book_id' => $book->id,
+                'control_number' => $controlNumber,
+                'acquisition_year' => $copyYears[$index] ?? null,
+                'status' => 'available',
+                'condition' => $request->condition,
+                'is_lost_damaged' => false,
+            ]);
+        };
+
         // After successful creation, ensure cache is updated to prevent reuse of this base number
         if (preg_match('/^(\d{1,3})/', implode('', $controlNumbers), $m)) {
             $baseNum = intval($m[1]);
@@ -894,6 +870,7 @@ class BookController extends Controller
 
         // Prepare control numbers
         $controlNumbers = $book->control_numbers ?? [];
+        $newControlNumbersAdded = [];
         $base = trim($request->call_number ?: '');
         if ($addCopies > 0) {
             // Find the highest suffix used so far
@@ -906,19 +883,12 @@ class BookController extends Controller
                 }
             }
             for ($i = 1; $i <= $addCopies; $i++) {
-                $controlNumbers[] = $base . '-' . str_pad($maxSuffix + $i, 3, '0', STR_PAD_LEFT);
+                $newCtrlNum = $base . '-' . str_pad($maxSuffix + $i, 3, '0', STR_PAD_LEFT);
+                $controlNumbers[] = $newCtrlNum;
+                $newControlNumbersAdded[] = $newCtrlNum;
             }
         }
 
-        // Save per-copy condition (copy_condition[])
-        $copyConditions = $request->input('copy_condition', []);
-        // If user removed or added copies, ensure the array matches the number of control numbers
-        if (count($copyConditions) < count($controlNumbers)) {
-            // Fill missing with 'Brand New'
-            $copyConditions = array_pad($copyConditions, count($controlNumbers), 'Brand New');
-        } elseif (count($copyConditions) > count($controlNumbers)) {
-            $copyConditions = array_slice($copyConditions, 0, count($controlNumbers));
-        }
         $book->update([
             'title' => $request->title,
             'author' => $request->author,
@@ -938,6 +908,18 @@ class BookController extends Controller
             'source_of_funds' => $request->source_of_funds,
             'copy_conditions' => $copyConditions,
         ]);
+
+        // Create BookCopy records for newly added copies (normalized structure)
+        foreach ($newControlNumbersAdded as $newCtrlNum) {
+            BookCopy::create([
+                'book_id' => $book->id,
+                'control_number' => $newCtrlNum,
+                'acquisition_year' => null,
+                'status' => 'available',
+                'condition' => $request->condition,
+                'is_lost_damaged' => false,
+            ]);
+        }
 
         // Update available_copies
         $book->update([
@@ -1141,7 +1123,13 @@ class BookController extends Controller
             // Get control number
             $controlNumber = $lostDamagedItem->borrow?->copy_number ?? $lostDamagedItem->copy_number;
 
-            // Remove control number from lost_control_numbers to make it available again
+            // Update BookCopy record if it exists (new normalized structure)
+            $bookCopy = $book->getCopyByControlNumber($controlNumber);
+            if ($bookCopy) {
+                $bookCopy->markAsAvailable();
+            }
+
+            // Also update legacy JSON arrays for backward compatibility
             $lostControlNumbers = $book->lost_control_numbers ?? [];
             if (in_array($controlNumber, $lostControlNumbers)) {
                 $lostControlNumbers = array_filter($lostControlNumbers, function($ctrl) use ($controlNumber) {
@@ -1208,7 +1196,13 @@ class BookController extends Controller
         // Get control number
         $controlNumber = $lostDamagedItem->borrow?->copy_number ?? $lostDamagedItem->copy_number;
 
-        // Remove control number from lost_control_numbers to make it available again
+        // Update BookCopy record if it exists (new normalized structure)
+        $bookCopy = $book->getCopyByControlNumber($controlNumber);
+        if ($bookCopy) {
+            $bookCopy->markAsAvailable();
+        }
+
+        // Also update legacy JSON arrays for backward compatibility
         $lostControlNumbers = $book->lost_control_numbers ?? [];
         if (in_array($controlNumber, $lostControlNumbers)) {
             $lostControlNumbers = array_filter($lostControlNumbers, function($ctrl) use ($controlNumber) {

@@ -28,6 +28,7 @@ class Book extends Model
         'condition',
         'copy_status',
         'call_number',
+        'available_copies',
 
         // ✅ NEW Dewey fields
         'dewey_decimal',
@@ -51,16 +52,6 @@ class Book extends Model
     protected $dates = ['deleted_at'];
 
     /**
-     * Hide the database column so only the accessor is used
-     */
-    protected $hidden = ['available_copies'];
-
-    /**
-     * Force the accessor to be used for available_copies instead of the database column
-     */
-    protected $appends = ['available_copies'];
-
-    /**
      * Ensure copy_years is always an array
      */
     public function getCopyYearsAttribute($value)
@@ -69,6 +60,12 @@ class Book extends Model
             return [];
         }
         return is_array($value) ? $value : json_decode($value, true) ?? [];
+    }
+
+    // ===== RELATIONSHIPS =====
+    public function copies()
+    {
+        return $this->hasMany(BookCopy::class, 'book_id', 'id');
     }
 
     public function borrows()
@@ -84,31 +81,34 @@ class Book extends Model
     }
 
     /**
-     * Get available copies - calculated dynamically from total, borrowed, and lost
+     * Get the count of available copies (only books that can currently be borrowed)
+     * This is a consistent accessor that always uses BookCopy records as source of truth
      */
     public function getAvailableCopiesAttribute()
     {
-        $totalCopies = (int) ($this->attributes['copies'] ?? 0);
+        // Always use BookCopy records as source of truth (new normalized structure)
+        return $this->copies()
+            ->where('status', 'available')
+            ->where('is_lost_damaged', false)
+            ->count();
+    }
+
+    /**
+     * Get the total count of ALL copies regardless of status
+     * This includes available, borrowed, lost, damaged, found, repaired, etc.
+     */
+    public function getTotalCopiesAttribute()
+    {
+        // Use BookCopy records count as the source of truth
+        $totalFromBookCopy = $this->copies()->count();
         
-        // Count borrowed copies
-        if ($this->relationLoaded('borrows')) {
-            // Use the eager-loaded relation
-            $borrowedCopies = 0;
-            foreach ($this->borrows as $borrow) {
-                if (is_null($borrow->returned_at)) {
-                    $borrowedCopies++;
-                }
-            }
-        } else {
-            // Query if not eager-loaded
-            $borrowedCopies = (int) $this->borrows()
-                ->whereNull('returned_at')
-                ->count();
+        // If BookCopy records exist, use them; otherwise fallback to the copies field
+        if ($totalFromBookCopy > 0) {
+            return $totalFromBookCopy;
         }
         
-        $lostDamagedCount = count($this->lost_control_numbers ?? []);
-        
-        return max(0, $totalCopies - $borrowedCopies - $lostDamagedCount);
+        // Fallback for records that don't have BookCopy entries yet
+        return $this->copies ?? 0;
     }
 
     /**
@@ -116,6 +116,13 @@ class Book extends Model
      */
     public function markControlNumberAsLost($controlNumber)
     {
+        // Update BookCopy if it exists (new normalized structure)
+        $bookCopy = $this->getCopyByControlNumber($controlNumber);
+        if ($bookCopy) {
+            $bookCopy->markAsLost();
+        }
+        
+        // Also update the legacy JSON array for backward compatibility
         $lostNumbers = $this->lost_control_numbers ?? [];
         if (!in_array($controlNumber, $lostNumbers)) {
             $lostNumbers[] = $controlNumber;
@@ -137,6 +144,16 @@ class Book extends Model
      */
     public function getAvailableControlNumbers()
     {
+        // Use new BookCopy structure if available
+        if ($this->copies()->exists()) {
+            return $this->copies()
+                ->where('status', 'available')
+                ->where('is_lost_damaged', false)
+                ->pluck('control_number')
+                ->toArray();
+        }
+        
+        // Fallback to old array-based structure
         if (!$this->control_numbers || !is_array($this->control_numbers)) {
             return [];
         }
@@ -151,5 +168,126 @@ class Book extends Model
         return array_filter($this->control_numbers, function ($ctrl) use ($borrowedCtrls, $lostCtrls) {
             return !in_array($ctrl, $borrowedCtrls) && !in_array($ctrl, $lostCtrls);
         });
+    }
+
+    // ===== NEW METHODS FOR NORMALIZED STRUCTURE =====
+    
+    /**
+     * Get a specific copy by control number
+     */
+    public function getCopyByControlNumber($controlNumber)
+    {
+        return $this->copies()
+            ->where('control_number', $controlNumber)
+            ->first();
+    }
+
+    /**
+     * Create a new copy for this book
+     */
+    public function addCopy($controlNumber, $acquisitionYear = null, $condition = null)
+    {
+        return $this->copies()->create([
+            'control_number' => $controlNumber,
+            'acquisition_year' => $acquisitionYear,
+            'status' => 'available',
+            'condition' => $condition,
+            'is_lost_damaged' => false,
+        ]);
+    }
+
+    /**
+     * Get all available copies (normalized structure)
+     */
+    public function getAvailableCopies()
+    {
+        return $this->copies()
+            ->where('status', 'available')
+            ->where('is_lost_damaged', false)
+            ->get();
+    }
+
+    /**
+     * Get all borrowed copies
+     */
+    public function getBorrowedCopies()
+    {
+        return $this->copies()
+            ->where('status', 'borrowed')
+            ->get();
+    }
+
+    /**
+     * Get all lost or damaged copies
+     */
+    public function getLostOrDamagedCopies()
+    {
+        return $this->copies()
+            ->where('is_lost_damaged', true)
+            ->get();
+    }
+
+    /**
+     * Mark a copy as lost or damaged
+     */
+    public function markCopyAsLostOrDamaged($controlNumber, $type = 'lost')
+    {
+        $copy = $this->getCopyByControlNumber($controlNumber);
+        if ($copy) {
+            $status = ($type === 'damaged') ? 'damaged' : 'lost';
+            $copy->update([
+                'status' => $status,
+                'is_lost_damaged' => true,
+            ]);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Mark a copy as available (restore from lost/damaged)
+     */
+    public function restoreCopy($controlNumber)
+    {
+        $copy = $this->getCopyByControlNumber($controlNumber);
+        if ($copy) {
+            $copy->markAsAvailable();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Get total number of copies (normalized) - ALL copies regardless of status
+     * Matches the total_copies accessor
+     */
+    public function getTotalCopiesCount()
+    {
+        return $this->total_copies;
+    }
+
+    /**
+     * Get count of available copies only
+     * Matches the available_copies accessor
+     */
+    public function getAvailableCopiesCount()
+    {
+        return $this->available_copies;
+    }
+
+    /**
+     * Get breakdown of copy statuses for detailed inventory reporting
+     */
+    public function getCopyStatusBreakdown()
+    {
+        return [
+            'total' => $this->total_copies,
+            'available' => $this->copies()->where('status', 'available')->where('is_lost_damaged', false)->count(),
+            'borrowed' => $this->copies()->where('status', 'borrowed')->where('is_lost_damaged', false)->count(),
+            'lost' => $this->copies()->where('status', 'lost')->where('is_lost_damaged', true)->count(),
+            'damaged' => $this->copies()->where('status', 'damaged')->where('is_lost_damaged', true)->count(),
+            'found' => $this->copies()->where('status', 'found')->where('is_lost_damaged', false)->count(),
+            'repaired' => $this->copies()->where('status', 'repaired')->where('is_lost_damaged', false)->count(),
+        ];
     }
 }

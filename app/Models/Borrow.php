@@ -50,6 +50,7 @@ class Borrow extends Model
     protected $fillable = [
         'user_id',
         'book_id',
+        'book_copy_id',
         'borrowed_at',
         'due_date',
         'returned_at',
@@ -80,6 +81,11 @@ class Borrow extends Model
     public function book()
     {
         return $this->belongsTo(Book::class, 'book_id');
+    }
+
+    public function bookCopy()
+    {
+        return $this->belongsTo(BookCopy::class, 'book_copy_id');
     }
 
     // Accessor to get the borrower (User or Teacher) directly

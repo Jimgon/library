@@ -61,16 +61,17 @@
                                     <option value="" selected disabled>Select a book...</option>
                                     @foreach($books as $book)
                                         @php
-                                            $avail = $book->available_copies ?? $book->copies ?? 0;
-                                            $total = $book->copies ?? 0;
+                                            // Get accurate counts from the book model accessors
+                                            $available = $book->available_copies;
+                                            $total = $book->total_copies;
                                         @endphp
                                         <option value="{{ $book->_id ?? $book->id }}" 
                                                         data-title="{{ $book->title }}" 
                                                         data-author="{{ $book->author }}" 
-                                                        data-available-copies="{{ $avail }}" 
+                                                        data-available-copies="{{ $available }}" 
                                                         data-total-copies="{{ $total }}"
                                                         data-control-numbers='@json($book->control_numbers ?? [])'>
-                                            {{ $book->title }} ({{ $avail }}/{{ $total }} available)
+                                            {{ $book->title }} ({{ $available }}/{{ $total }} available)
                                         </option>
                                     @endforeach
                                 </select>

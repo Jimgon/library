@@ -204,27 +204,28 @@
                                     <option value="" selected disabled>Select an option...</option>
                                     @foreach($books as $book)
                                         @php
-        $avail = $book->available_copies ?? $book->copies ?? 0;
-        $total = $book->copies ?? 0;
-        // Get borrowed control numbers for this book
-        $borrowedCtrls = $book->borrows()
-            ->whereNull('returned_at')
-            ->pluck('copy_number')
-            ->toArray();
-        // Get lost control numbers for this book
-        $lostCtrls = $book->lost_control_numbers ?? [];
+                                            // Get accurate counts from the book model accessors
+                                            $available = $book->available_copies;
+                                            $total = $book->total_copies;
+                                            // Get borrowed control numbers for this book
+                                            $borrowedCtrls = $book->borrows()
+                                                ->whereNull('returned_at')
+                                                ->pluck('copy_number')
+                                                ->toArray();
+                                            // Get lost control numbers for this book
+                                            $lostCtrls = $book->lost_control_numbers ?? [];
                                         @endphp
                                         <option value="{{ $book->_id ?? $book->id }}"
                                                         data-title="{{ $book->title }}"
                                                         data-author="{{ $book->author ?? '' }}"
                                                         data-publisher="{{ $book->publisher ?? '' }}"
                                                         data-isbn="{{ $book->isbn ?? '' }}"
-                                                        data-available-copies="{{ $avail }}"
+                                                        data-available-copies="{{ $available }}"
                                                         data-total-copies="{{ $total }}"
                                                         data-control-numbers='@json($book->control_numbers ?? [])'
                                                         data-borrowed-controls='@json($borrowedCtrls)'
                                                         data-lost-controls='@json($lostCtrls)'>
-                                            {{ $book->title }} ({{ $avail }}/{{ $total }} available)
+                                            {{ $book->title }} ({{ $available }}/{{ $total }} available)
                                         </option>
                                     @endforeach
                                 </select>
