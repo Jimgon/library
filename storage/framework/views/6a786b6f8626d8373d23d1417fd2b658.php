@@ -89,6 +89,17 @@
         </div>
     </div>
 
+        <div class="row g-3 mt-3">
+        <div class="col-lg-12">
+            <div class="p-3 rounded shadow-sm bg-white">
+                <h5 class="mb-3">Monthly Activity</h5>
+                <div style="height:240px;">
+                    <canvas id="monthlyActivityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Row 2: Available Books (shadcn style) -->
     <div class="mt-4">
         <div style="background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;box-shadow:0 1px 2px 0 #0001;">
@@ -167,6 +178,20 @@
             }
         });
     }
+
+    // Monthly Activity (line)
+    const monthlyCtx = document.getElementById('monthlyActivityChart')?.getContext('2d');
+    if(monthlyCtx){
+        new Chart(monthlyCtx, {
+            type: 'line',
+            data: {
+                labels: <?php echo json_encode($monthlyLabelsSafe, 15, 512) ?>,
+                datasets: [{ label:'Activity', data:<?php echo json_encode($monthlyDataSafe, 15, 512) ?>, borderColor:'#000000', backgroundColor:'rgba(0,0,0,0.06)', tension:0.3, fill:true }]
+            },
+            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+        });
+    }
+
 </script>
 </div>
 <?php $__env->stopSection(); ?>

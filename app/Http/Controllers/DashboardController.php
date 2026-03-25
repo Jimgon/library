@@ -66,6 +66,21 @@ class DashboardController extends Controller
             }
         }
 
+        // Prepare monthly activity data
+        $monthlyLabelsSafe = [];
+        $monthlyDataSafe = [];
+        
+        // Get the last 12 months of borrow activity
+        for ($i = 11; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $monthlyLabelsSafe[] = $date->format('M Y');
+            
+            $count = Borrow::whereYear('created_at', $date->year)
+                ->whereMonth('created_at', $date->month)
+                ->count();
+            $monthlyDataSafe[] = $count;
+        }
+
         return view('dashboard', compact(
             'totalBooks',
             'totalUsers',
@@ -73,8 +88,10 @@ class DashboardController extends Controller
             'studentsWithUnreturned',
             'availableBooks',
             'mostBorrowedBookLabels',
-            'mostBorrowedBookData'
-            ,'nearDueBorrows'
+            'mostBorrowedBookData',
+            'monthlyLabelsSafe',
+            'monthlyDataSafe',
+            'nearDueBorrows'
         ));
     }
 

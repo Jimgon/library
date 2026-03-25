@@ -62,7 +62,7 @@
         </div>
     </div>
 
-    <div class="row g-3 mt-3">
+    {{-- <div class="row g-3 mt-3">
         <div class="col-lg-12">
             <div class="p-3 rounded shadow-sm bg-white">
                 <h5 class="mb-3">Monthly Activity</h5>
@@ -71,7 +71,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> --}}
 
     <!-- Detailed Transactions Section -->
     <div class="row g-3 mt-4">
@@ -303,18 +303,18 @@
         });
     }
 
-    // Monthly Activity (line)
-    const monthlyCtx = document.getElementById('monthlyActivityChart')?.getContext('2d');
-    if(monthlyCtx){
-        new Chart(monthlyCtx, {
-            type: 'line',
-            data: {
-                labels: @json($monthlyLabelsSafe),
-                datasets: [{ label:'Activity', data:@json($monthlyDataSafe), borderColor:'#000000', backgroundColor:'rgba(0,0,0,0.06)', tension:0.3, fill:true }]
-            },
-            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
-        });
-    }
+    // // Monthly Activity (line)
+    // const monthlyCtx = document.getElementById('monthlyActivityChart')?.getContext('2d');
+    // if(monthlyCtx){
+    //     new Chart(monthlyCtx, {
+    //         type: 'line',
+    //         data: {
+    //             labels: @json($monthlyLabelsSafe),
+    //             datasets: [{ label:'Activity', data:@json($monthlyDataSafe), borderColor:'#000000', backgroundColor:'rgba(0,0,0,0.06)', tension:0.3, fill:true }]
+    //         },
+    //         options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+    //     });
+    // }
 </script>
 
 <script>
