@@ -37,6 +37,16 @@ class DashboardController extends Controller
         $availableBooks = Book::where('status', 'available')
             ->orderBy('title')
             ->paginate(5, ['*'], 'booksPage');
+        
+        // Enrich available books with accurate copy counts from BookCopy table
+        $availableBooks->getCollection()->transform(function ($book) {
+            $book->total_copies_actual = \App\Models\BookCopy::where('book_id', $book->id)->count();
+            $book->available_copies_actual = \App\Models\BookCopy::where('book_id', $book->id)
+                ->where('status', 'available')
+                ->where('is_lost_damaged', false)
+                ->count();
+            return $book;
+        });
 
         // Prepare data for Most Borrowed Books chart
         $mostBorrowedBooks = Borrow::select('book_id')

@@ -115,8 +115,8 @@
                                     <td style="padding:0.5rem 0.75rem;">{{ $book->author }}</td>
                                     <td style="padding:0.5rem 0.75rem;">{{ $book->isbn }}</td>
                                     <td style="padding:0.5rem 0.75rem;">{{ $book->category }}</td>
-                                    <td style="padding:0.5rem 0.75rem;">{{ $book->available_copies }}</td>
-                                    <td style="padding:0.5rem 0.75rem;">{{ $book->copies }}</td>
+                                    <td style="padding:0.5rem 0.75rem;">{{ $book->available_copies_actual ?? $book->available_copies }}</td>
+                                    <td style="padding:0.5rem 0.75rem;">{{ $book->total_copies_actual ?? $book->copies }}</td>
                                 </tr>
                             @endforeach
                         </tbody>

@@ -889,6 +889,12 @@ class BookController extends Controller
             }
         }
 
+        // Prepare copy conditions array
+        $copyConditions = $book->copy_conditions ?? [];
+        while (count($copyConditions) < count($controlNumbers)) {
+            $copyConditions[] = 'available';
+        }
+
         $book->update([
             'title' => $request->title,
             'author' => $request->author,

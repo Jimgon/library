@@ -113,8 +113,8 @@
                                     <td style="padding:0.5rem 0.75rem;"><?php echo e($book->author); ?></td>
                                     <td style="padding:0.5rem 0.75rem;"><?php echo e($book->isbn); ?></td>
                                     <td style="padding:0.5rem 0.75rem;"><?php echo e($book->category); ?></td>
-                                    <td style="padding:0.5rem 0.75rem;"><?php echo e($book->available_copies); ?></td>
-                                    <td style="padding:0.5rem 0.75rem;"><?php echo e($book->copies); ?></td>
+                                    <td style="padding:0.5rem 0.75rem;"><?php echo e($book->available_copies_actual ?? $book->available_copies); ?></td>
+                                    <td style="padding:0.5rem 0.75rem;"><?php echo e($book->total_copies_actual ?? $book->copies); ?></td>
                                 </tr>
                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </tbody>
