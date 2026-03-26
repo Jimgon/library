@@ -30,7 +30,16 @@ class BookController extends Controller
      */
     public function printAll()
     {
-        $books = Book::orderBy('title', 'asc')->get();
+        $books = Book::with('copies')->orderBy('title', 'asc')->get();
+        
+        // Auto-migrate JSON data to BookCopy records for books that need it
+        foreach ($books as $book) {
+            if ($book->copies()->count() === 0 && !empty($book->control_numbers)) {
+                $book->migrateJsonToCopies();
+                $book->load('copies');
+            }
+        }
+        
         return view('books.print', compact('books'));
     }
 
@@ -39,10 +48,12 @@ class BookController extends Controller
      */
     public function addCopies(Request $request, $bookId)
     {
+        $currentYear = date('Y');
         $request->validate([
             'additional_copies' => 'required|integer|min:1|max:1000',
-            'acquisition_year' => 'nullable|integer|min:1900|max:'.date('Y'),
+            'acquisition_year' => 'nullable|integer|min:1900|max:' . $currentYear,
             'copy_years' => 'nullable|array',
+            'copy_years.*' => 'nullable|integer|min:1900|max:' . $currentYear,
         ]);
 
         $book = Book::findOrFail($bookId);
@@ -171,7 +182,7 @@ class BookController extends Controller
 
         if (in_array($extension, ['xlsx', 'xls'])) {
             // Temporarily disable Excel import due to compatibility issues
-            return redirect()->route('books.index')->with('error', 'Excel import is currently not available. Please use CSV format for now.');
+            return redirect()->route('books.catalog')->with('error', 'Excel import is currently not available. Please use CSV format for now.');
         } else {
             $handle = fopen($file->getRealPath(), 'r');
             $rows = [];
@@ -218,10 +229,10 @@ class BookController extends Controller
         ]);
 
         if (!empty($errors)) {
-            return redirect()->route('books.index')->with('warning', 'Books imported with some errors: ' . implode(', ', $errors));
+            return redirect()->route('books.catalog')->with('warning', 'Books imported with some errors: ' . implode(', ', $errors));
         }
 
-        return redirect()->route('books.index')->with('success', 'Books imported successfully.');
+        return redirect()->route('books.catalog')->with('success', 'Books imported successfully.');
     }
     public function index(Request $request)
     {
@@ -279,9 +290,18 @@ class BookController extends Controller
         }
 
         $books = $query
+            ->with('copies')
             ->orderBy('title', 'asc')
             ->paginate(12)
             ->withQueryString();
+
+        // Auto-migrate JSON data to BookCopy records for books that need it
+        foreach ($books as $book) {
+            if ($book->copies()->count() === 0 && !empty($book->control_numbers)) {
+                $book->migrateJsonToCopies();
+                $book->load('copies');
+            }
+        }
 
         // fetch distinct categories from DB, clean and organize
         $customCategories = Book::query()
@@ -332,8 +352,8 @@ class BookController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        // View does not exist, fallback to index
-        return redirect()->route('books.index')->with('warning', 'Distributed books listing not available.');
+        // View does not exist, fallback to catalog
+        return redirect()->route('books.catalog')->with('warning', 'Distributed books listing not available');
     }
 
     /**
@@ -341,8 +361,8 @@ class BookController extends Controller
      */
     public function distributeCreate()
     {
-        // View does not exist, fallback to index
-        return redirect()->route('books.index')->with('warning', 'Distributed book create form not available.');
+        // View does not exist, fallback to catalog
+        return redirect()->route('books.catalog')->with('warning', 'Distributed book create form not available.');
     }
 
     /**
@@ -376,8 +396,8 @@ class BookController extends Controller
             'details' => "Book '{$book->title}' added for distribution.",
         ]);
 
-        // Route does not exist, fallback to index
-        return redirect()->route('books.index')->with('success', 'Book added for distribution.');
+        // Route does not exist, fallback to catalog
+        return redirect()->route('books.catalog')->with('success', 'Book added for distribution.');
     }
 
     /**
@@ -394,8 +414,8 @@ class BookController extends Controller
         $extension = $file->getClientOriginalExtension();
 
         if (in_array($extension, ['xlsx', 'xls'])) {
-            // Route does not exist, fallback to index
-            return redirect()->route('books.index')->with('error', 'Excel import is currently not available. Please use CSV format for now.');
+            // Route does not exist, fallback to catalog
+            return redirect()->route('books.catalog')->with('error', 'Excel import is currently not available. Please use CSV format for now.');
         } else {
             $handle = fopen($file->getRealPath(), 'r');
             $rows = [];
@@ -451,12 +471,12 @@ class BookController extends Controller
         ]);
 
         if (!empty($errors)) {
-            // Route does not exist, fallback to index
-            return redirect()->route('books.index')->with('warning', 'Distributed books imported with some errors: ' . implode(', ', $errors));
+            // Route does not exist, fallback to catalog
+            return redirect()->route('books.catalog')->with('warning', 'Distributed books imported with some errors: ' . implode(', ', $errors));
         }
 
-        // Route does not exist, fallback to index
-        return redirect()->route('books.index')->with('success', 'Distributed books imported successfully.');
+        // Route does not exist, fallback to catalog
+        return redirect()->route('books.catalog')->with('success', 'Distributed books imported successfully');
     }
 
     /**
@@ -466,8 +486,8 @@ class BookController extends Controller
     {
         $book = DistributedBook::with(['borrows' => function($q){ $q->whereNull('returned_at')->with('user'); }])->find($id);
         if (!$book) abort(404);
-        // View does not exist, fallback to index
-        return redirect()->route('books.index')->with('warning', 'Distributed book details not available.');
+        // View does not exist, fallback to catalog
+        return redirect()->route('books.catalog')->with('warning', 'Distributed book details not available.');
     }
 
     /**
@@ -477,8 +497,8 @@ class BookController extends Controller
     {
         $book = DistributedBook::find($id);
         if (!$book) abort(404);
-        // View does not exist, fallback to index
-        return redirect()->route('books.index')->with('warning', 'Distributed book edit form not available.');
+        // View does not exist, fallback to catalog
+        return redirect()->route('books.catalog')->with('warning', 'Distributed book edit form not available.');
     }
 
     /**
@@ -520,8 +540,8 @@ class BookController extends Controller
             'details' => "Distributed book '{$book->title}' updated.",
         ]);
 
-        // Route does not exist, fallback to index
-        return redirect()->route('books.index')->with('success', 'Distributed book updated.');
+        // Route does not exist, fallback to catalog
+        return redirect()->route('books.catalog')->with('success', 'Distributed book updated.');
     }
 
     /**
@@ -544,39 +564,66 @@ class BookController extends Controller
             'details' => "Distributed book '{$title}' deleted.",
         ]);
 
-        // Route does not exist, fallback to index
-        return redirect()->route('books.index')->with('success', 'Distributed book deleted.');
+        // Route does not exist, fallback to catalog
+        return redirect()->route('books.catalog')->with('success', 'Distributed book deleted.');
     }
 
     public function show(Book $book)
     {
-        $book->load('borrows.user');
+        // Auto-migrate JSON data to BookCopy records if needed
+        $bookCopyCount = $book->copies()->count();
         
-        // Generate control numbers if missing (for books created before this feature)
-        $controlNumbers = $book->control_numbers ?? [];
-        if (empty($controlNumbers) && $book->copies > 0) {
-            $base = $book->call_number ?? 'AUTO';
-            for ($i = 1; $i <= $book->copies; $i++) {
-                $controlNumbers[] = $base . '-' . str_pad($i, 3, '0', STR_PAD_LEFT);
+        // If book has no BookCopy records but claims to have copies, try to migrate or create them
+        if ($bookCopyCount === 0 && !empty($book->control_numbers)) {
+            // Try to migrate from JSON
+            $book->migrateJsonToCopies();
+            $bookCopyCount = $book->copies()->count();
+        }
+        
+        // If still no BookCopy records but book.copies > 0, create placeholder records
+        if ($bookCopyCount === 0 && $book->copies > 0) {
+            try {
+                // Create placeholder BookCopy records without control numbers
+                for ($i = 0; $i < $book->copies; $i++) {
+                    BookCopy::create([
+                        'book_id' => $book->id,
+                        'control_number' => null,
+                        'acquisition_year' => null,
+                        'status' => 'available',
+                        'condition' => null,
+                        'is_lost_damaged' => false,
+                    ]);
+                }
+                $bookCopyCount = $book->copies()->count();
+            } catch (\Exception $e) {
+                Log::error('Error creating placeholder BookCopy records', [
+                    'book_id' => $book->id,
+                    'error' => $e->getMessage()
+                ]);
             }
         }
         
-        // Ensure copy_status array exists
-        $copyStatus = $book->copy_status ?? [];
-        while (count($copyStatus) < count($controlNumbers)) {
-            $copyStatus[] = 'available';
-        }
+        $book->load('borrows.user', 'copies');
         
-        // Ensure copy_years array exists
-        $copyYears = $book->copy_years ?? [];
-        while (count($copyYears) < count($controlNumbers)) {
-            $copyYears[] = $book->created_at ? $book->created_at->year : date('Y');
-        }
+        // Fetch all copies for this book from database
+        $copies = $book->copies()->get();
         
-        // Ensure copy_conditions array exists
-        $copyConditions = $book->copy_conditions ?? [];
-        while (count($copyConditions) < count($controlNumbers)) {
-            $copyConditions[] = 'Brand New';
+        // Ensure we have the correct count - use the actual BookCopy count, not the integer field
+        $actualCopiesCount = $copies->count();
+        
+        // Transform copies into array format for JSON response
+        // Include index-based identifiers even for null control numbers
+        $controlNumbers = [];
+        $copyStatus = [];
+        $copyYears = [];
+        $copyConditions = [];
+        
+        foreach ($copies as $index => $copy) {
+            // Use control_number if available, otherwise use index/placeholder
+            $controlNumbers[] = $copy->control_number ?? "Unassigned-" . ($index + 1);
+            $copyStatus[] = $copy->status ?? 'available';
+            $copyYears[] = $copy->acquisition_year;
+            $copyConditions[] = $copy->condition ?? 'Unknown';
         }
         
         // Fetch repaired items for this book
@@ -611,13 +658,13 @@ class BookController extends Controller
             'source_of_funds' => $book->source_of_funds,
             'cost_price' => $book->cost_price,
             'purchase_price' => $book->purchase_price,
-            'copies' => $book->copies,
+            'copies' => $actualCopiesCount,  // Use actual count of BookCopy records
             'available_copies' => $book->available_copies,
             'control_numbers' => $controlNumbers,
             'copy_status' => $copyStatus,
             'copy_years' => $copyYears,
             'copy_conditions' => $copyConditions,
-            'lost_control_numbers' => $book->lost_control_numbers ?? [],
+            'lost_control_numbers' => $copies->where('is_lost_damaged', true)->pluck('control_number')->toArray(),
             'repaired_items' => $repairedItems,
             'created_at' => $book->created_at,
             'status' => $book->status,
@@ -689,8 +736,6 @@ class BookController extends Controller
             'control_numbers.*' => 'string|max:50',
             'copy_year' => 'nullable|array',
             'copy_year.*' => 'nullable|integer|min:1900|max:'.(date('Y')+1),
-            'copy_status' => 'nullable|array',
-            'copy_status.*' => 'nullable|string|max:50',
         ]);
 
         if (Book::where('isbn', $request->isbn)->exists()) {
@@ -699,18 +744,18 @@ class BookController extends Controller
 
         $categoryValue = trim($request->category === 'other' ? $request->other_category : $request->category);
 
-        // prepare control numbers for each copy
+        // Prepare control numbers for each copy (will be stored in BookCopy table)
         $submitted = $request->input('control_numbers', []);
         if (is_array($submitted) && count($submitted) === (int) $request->copies) {
             $controlNumbers = $submitted;
         } else {
             $base = trim($request->call_number ?: '');
             if ($base === '') {
-                // use cache to keep global sequential base
+                // Use cache to keep global sequential base
                 $next = Cache::increment('ctrl_base');
                 $base = str_pad($next, 3, '0', STR_PAD_LEFT);
             } else {
-                // if user manually provided numeric base, bump cache if needed
+                // If user manually provided numeric base, bump cache if needed
                 if (preg_match('/^(\d{1,3})$/', $base, $m)) {
                     $num = intval($m[1]);
                     $current = Cache::get('ctrl_base', 0);
@@ -725,41 +770,19 @@ class BookController extends Controller
             }
         }
 
-        // Validate that control numbers don't already exist in any book
-        $existingBooks = Book::all();
-        foreach ($existingBooks as $book) {
-            if (is_array($book->control_numbers)) {
-                $duplicates = array_intersect($controlNumbers, $book->control_numbers);
-                if (!empty($duplicates)) {
-                    return back()->withErrors(['copies' => 'Control number(s) ' . implode(', ', $duplicates) . ' already exist in the system. Please refresh the page.'])->withInput();
-                }
-            }
-
-            // Check if any control number is marked as lost
-            if (is_array($book->lost_control_numbers)) {
-                $lostDuplicates = array_intersect($controlNumbers, $book->lost_control_numbers);
-                if (!empty($lostDuplicates)) {
-                    return back()->withErrors(['copies' => 'Control number(s) ' . implode(', ', $lostDuplicates) . ' are marked as lost and cannot be reused. The book(s) with these control numbers are no longer available.'])->withInput();
-                }
-            }
+        // Validate that control numbers don't already exist in BookCopy table
+        $existingControls = BookCopy::whereIn('control_number', $controlNumbers)->pluck('control_number')->toArray();
+        if (!empty($existingControls)) {
+            return back()
+                ->withErrors(['copies' => 'Control number(s) ' . implode(', ', $existingControls) . ' already exist in the system.'])
+                ->withInput();
         }
 
-        // Prepare copy years and copy status arrays
+        // Prepare copy years from form input
         $copyYears = $request->input('copy_year', []);
-        $copyStatus = $request->input('copy_status', []);
-        
-        // Ensure arrays are properly indexed and have correct count
         $copyYears = array_values(array_slice($copyYears, 0, $request->copies));
-        $copyStatus = array_values(array_slice($copyStatus, 0, $request->copies));
-        
-        // Fill remaining slots with defaults if needed
-        while (count($copyYears) < $request->copies) {
-            $copyYears[] = null;
-        }
-        while (count($copyStatus) < $request->copies) {
-            $copyStatus[] = 'available';
-        }
 
+        // Create the book record (without JSON fields)
         $book = Book::create([
             'title'    => $request->title,
             'author'   => $request->author,
@@ -769,9 +792,6 @@ class BookController extends Controller
             'call_number' => $request->call_number,
             'copies'   => $request->copies,
             'available_copies' => $request->copies,
-            'control_numbers' => $controlNumbers,
-            'copy_years' => $copyYears,
-            'copy_status' => $copyStatus,
             'status'   => 'available',
             'published_year' => $request->published_year,
             'pages' => $request->pages,
@@ -783,19 +803,28 @@ class BookController extends Controller
             'source_of_funds' => $request->source_of_funds,
         ]);
 
-        // Create BookCopy records for each control number (normalized structure)
-        foreach ($controlNumbers as $index => $controlNumber) {
-            BookCopy::create([
-                'book_id' => $book->id,
-                'control_number' => $controlNumber,
-                'acquisition_year' => $copyYears[$index] ?? null,
-                'status' => 'available',
-                'condition' => $request->condition,
-                'is_lost_damaged' => false,
-            ]);
-        };
+        // Create BookCopy records for each control number (single source of truth)
+        try {
+            foreach ($controlNumbers as $index => $controlNumber) {
+                BookCopy::create([
+                    'book_id' => $book->id,
+                    'control_number' => $controlNumber,
+                    'acquisition_year' => $copyYears[$index] ?? null,
+                    'status' => 'available',
+                    'condition' => $request->condition,
+                    'is_lost_damaged' => false,
+                ]);
+            }
+        } catch (\Exception $e) {
+            // If copy creation fails, delete the book and return error
+            $book->delete();
+            Log::error('Error creating book copies', ['error' => $e->getMessage()]);
+            return back()
+                ->withErrors(['error' => 'Failed to create book copies. Please try again.'])
+                ->withInput();
+        }
 
-        // After successful creation, ensure cache is updated to prevent reuse of this base number
+        // Update cache to prevent reuse of this base number
         if (preg_match('/^(\d{1,3})/', implode('', $controlNumbers), $m)) {
             $baseNum = intval($m[1]);
             $currentCache = Cache::get('ctrl_base', 0);
@@ -807,14 +836,25 @@ class BookController extends Controller
         ActivityLog::create([
             'user_id' => Auth::id(),
             'action'  => 'Added Book',
-            'details' => "Book '{$book->title}' by {$book->author} added.",
+            'details' => "Book '{$book->title}' by {$book->author} added with {$request->copies} copy/copies.",
         ]);
 
-        return redirect()->route('books.index')->with('success', 'Book added successfully.');
+        return redirect()->route('books.catalog')->with('success', 'Book added successfully.');
     }
 
     public function edit(Book $book)
     {
+        // Auto-migrate JSON data to BookCopy records if needed
+        if ($book->copies()->count() === 0 && !empty($book->control_numbers)) {
+            $book->migrateJsonToCopies();
+        }
+        
+        // Eager load the copies relationship
+        $book->load('copies');
+        
+        // Get the actual copies records (not the integer attribute)
+        $copies = $book->copies()->get();
+        
         $categories = Book::select('category')->distinct()->orderBy('category', 'asc')->pluck('category');
         
         // Calculate next control base from highest existing base in database
@@ -833,12 +873,12 @@ class BookController extends Controller
         $nextBase = max($highestBase, $cacheBase) + 1;
         $nextCtrlBase = str_pad($nextBase, 3, '0', STR_PAD_LEFT);
         
-        return view('books.edit', compact('book', 'categories', 'nextCtrlBase'));
+        return view('books.edit', compact('book', 'copies', 'categories', 'nextCtrlBase'));
     }
 
     public function update(Request $request, Book $book)
     {
-        $oldCopies = $book->copies ?? 0;
+        $oldCopies = $book->copies()->count();
         $request->validate([
             'title'    => 'required|string|max:255',
             'author'   => 'required|string|max:255',
@@ -856,6 +896,8 @@ class BookController extends Controller
             'purchase_price' => 'nullable|numeric|min:0',
             'cost_price' => 'nullable|numeric|min:0',
             'source_of_funds' => 'nullable|string|max:255',
+            'copy_condition' => 'nullable|array',
+            'copy_condition.*' => 'nullable|string|in:Brand New,Old',
         ]);
 
         if (Book::where('isbn', $request->isbn)->where('id', '!=', $book->id)->exists()) {
@@ -864,37 +906,37 @@ class BookController extends Controller
 
         $categoryValue = $request->category === 'other' ? $request->other_category : $request->category;
 
-        // Add new copies to existing
-        $addCopies = (int) $request->copies;
+        // Calculate how many copies to add/remove
+        $newTotal = (int) $request->copies;
+        $addCopies = $newTotal - $oldCopies;
         $newTotalCopies = $oldCopies + $addCopies;
 
-        // Prepare control numbers
-        $controlNumbers = $book->control_numbers ?? [];
+        // Generate new control numbers for newly added copies (if needed)
         $newControlNumbersAdded = [];
-        $base = trim($request->call_number ?: '');
         if ($addCopies > 0) {
-            // Find the highest suffix used so far
-            $maxSuffix = 0;
-            foreach ($controlNumbers as $cn) {
-                $parts = explode('-', $cn);
-                if (count($parts) === 2 && $parts[0] === $base) {
-                    $num = intval($parts[1]);
-                    if ($num > $maxSuffix) $maxSuffix = $num;
-                }
-            }
+            $base = trim($request->call_number ?: '');
+            
+            // Find the highest suffix used so far from BookCopy table
+            $maxSuffix = $book->copies()
+                ->whereRaw("control_number LIKE ?", [$base . '-%'])
+                ->get()
+                ->reduce(function ($max, $copy) use ($base) {
+                    $parts = explode('-', $copy->control_number);
+                    if (count($parts) === 2) {
+                        $num = intval($parts[1]);
+                        return $num > $max ? $num : $max;
+                    }
+                    return $max;
+                }, 0);
+
+            // Generate new control numbers
             for ($i = 1; $i <= $addCopies; $i++) {
                 $newCtrlNum = $base . '-' . str_pad($maxSuffix + $i, 3, '0', STR_PAD_LEFT);
-                $controlNumbers[] = $newCtrlNum;
                 $newControlNumbersAdded[] = $newCtrlNum;
             }
         }
 
-        // Prepare copy conditions array
-        $copyConditions = $book->copy_conditions ?? [];
-        while (count($copyConditions) < count($controlNumbers)) {
-            $copyConditions[] = 'available';
-        }
-
+        // Update the book record (without JSON fields)
         $book->update([
             'title' => $request->title,
             'author' => $request->author,
@@ -903,7 +945,6 @@ class BookController extends Controller
             'category' => $categoryValue,
             'call_number' => $request->call_number,
             'copies' => $newTotalCopies,
-            'control_numbers' => $controlNumbers,
             'published_year' => $request->published_year,
             'pages' => $request->pages,
             'edition' => $request->edition,
@@ -912,35 +953,46 @@ class BookController extends Controller
             'purchase_price' => $request->purchase_price,
             'cost_price' => $request->cost_price,
             'source_of_funds' => $request->source_of_funds,
-            'copy_conditions' => $copyConditions,
         ]);
 
-        // Create BookCopy records for newly added copies (normalized structure)
-        foreach ($newControlNumbersAdded as $newCtrlNum) {
-            BookCopy::create([
-                'book_id' => $book->id,
-                'control_number' => $newCtrlNum,
-                'acquisition_year' => null,
-                'status' => 'available',
-                'condition' => $request->condition,
-                'is_lost_damaged' => false,
-            ]);
+        // Update conditions for existing copies if provided
+        if ($request->has('copy_condition') && is_array($request->copy_condition)) {
+            $copies = $book->copies()->get();
+            foreach ($copies as $index => $copy) {
+                if (isset($request->copy_condition[$index])) {
+                    $copy->update([
+                        'condition' => $request->copy_condition[$index]
+                    ]);
+                }
+            }
         }
 
-        // Update available_copies
-        $book->update([
-            'available_copies' => ($book->available_copies ?? 0) + $addCopies,
-        ]);
+        // Create BookCopy records for newly added copies
+        try {
+            foreach ($newControlNumbersAdded as $newCtrlNum) {
+                BookCopy::create([
+                    'book_id' => $book->id,
+                    'control_number' => $newCtrlNum,
+                    'acquisition_year' => null,
+                    'status' => 'available',
+                    'condition' => $request->condition,
+                    'is_lost_damaged' => false,
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error adding book copies during update', ['error' => $e->getMessage()]);
+            return back()
+                ->withErrors(['error' => 'Failed to add book copies. Please try again.'])
+                ->withInput();
+        }
 
         ActivityLog::create([
             'user_id' => Auth::id(),
             'action'  => 'Updated Book',
-            'details' => "Book '{$book->title}' updated.",
+            'details' => "Book '{$book->title}' updated." . ($addCopies > 0 ? " Added {$addCopies} copy/copies." : ''),
         ]);
 
-        return redirect()->route('books.index')->with('success', 'Book updated successfully.');
-
-        return redirect()->route('books.index')->with('success', 'Book updated successfully.');
+        return redirect()->route('books.catalog')->with('success', 'Book updated successfully.');
     }
 
     public function destroy(Book $book)
@@ -956,7 +1008,7 @@ class BookController extends Controller
             'details' => "Book '{$title}' by {$author} deleted.",
         ]);
 
-        return redirect()->route('books.index')->with('success', 'Book deleted successfully.');
+        return redirect()->route('books.catalog')->with('success', 'Book deleted successfully.');
     }
 
     /**
@@ -1129,32 +1181,10 @@ class BookController extends Controller
             // Get control number
             $controlNumber = $lostDamagedItem->borrow?->copy_number ?? $lostDamagedItem->copy_number;
 
-            // Update BookCopy record if it exists (new normalized structure)
+            // Update BookCopy record - single source of truth
             $bookCopy = $book->getCopyByControlNumber($controlNumber);
             if ($bookCopy) {
                 $bookCopy->markAsAvailable();
-            }
-
-            // Also update legacy JSON arrays for backward compatibility
-            $lostControlNumbers = $book->lost_control_numbers ?? [];
-            if (in_array($controlNumber, $lostControlNumbers)) {
-                $lostControlNumbers = array_filter($lostControlNumbers, function($ctrl) use ($controlNumber) {
-                    return $ctrl !== $controlNumber;
-                });
-                $book->update(['lost_control_numbers' => array_values($lostControlNumbers)]);
-            }
-
-            // Update the copy status to 'available' in the book's copy_status array
-            if (is_array($book->control_numbers)) {
-                $controlNumbers = $book->control_numbers;
-                $copyStatus = $book->copy_status ?? [];
-
-                // Find the index of this control number
-                $index = array_search($controlNumber, $controlNumbers);
-                if ($index !== false && isset($copyStatus[$index])) {
-                    $copyStatus[$index] = 'available';
-                    $book->update(['copy_status' => $copyStatus]);
-                }
             }
 
             $itemType = $isLost ? 'Lost' : 'Damaged';
@@ -1202,32 +1232,10 @@ class BookController extends Controller
         // Get control number
         $controlNumber = $lostDamagedItem->borrow?->copy_number ?? $lostDamagedItem->copy_number;
 
-        // Update BookCopy record if it exists (new normalized structure)
+        // Update BookCopy record - single source of truth
         $bookCopy = $book->getCopyByControlNumber($controlNumber);
         if ($bookCopy) {
             $bookCopy->markAsAvailable();
-        }
-
-        // Also update legacy JSON arrays for backward compatibility
-        $lostControlNumbers = $book->lost_control_numbers ?? [];
-        if (in_array($controlNumber, $lostControlNumbers)) {
-            $lostControlNumbers = array_filter($lostControlNumbers, function($ctrl) use ($controlNumber) {
-                return $ctrl !== $controlNumber;
-            });
-            $book->update(['lost_control_numbers' => array_values($lostControlNumbers)]);
-        }
-
-        // Update the copy status to 'available' in the book's copy_status array
-        if (is_array($book->control_numbers)) {
-            $controlNumbers = $book->control_numbers;
-            $copyStatus = $book->copy_status ?? [];
-
-            // Find the index of this control number
-            $index = array_search($controlNumber, $controlNumbers);
-            if ($index !== false && isset($copyStatus[$index])) {
-                $copyStatus[$index] = 'available';
-                $book->update(['copy_status' => $copyStatus]);
-            }
         }
 
         // Update the lost/damaged item status to 'repaired'

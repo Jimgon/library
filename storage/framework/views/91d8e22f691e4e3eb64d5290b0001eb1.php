@@ -157,10 +157,15 @@
                     <?php $__empty_1 = true; $__currentLoopData = $books; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $book): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                         <tr>
                             <?php
+                                // Fetch copies from database (source of truth)
+                                // Ensure we get the loaded collection, not the relationship
+                                $bookCopies = is_array($book->copies) || ($book->copies instanceof \Illuminate\Database\Eloquent\Collection) 
+                                    ? $book->copies 
+                                    : $book->copies()->get();
                                 $ctrlBase = '-';
-                                if (!empty($book->control_numbers) && is_array($book->control_numbers) && count($book->control_numbers) > 0) {
-                                    $first = $book->control_numbers[0];
-                                    $parts = explode('-', $first);
+                                if ($bookCopies && count($bookCopies) > 0) {
+                                    $first = $bookCopies[0];
+                                    $parts = explode('-', $first->control_number);
                                     $base = $parts[0] ?? ($book->call_number ?? '');
                                 } else {
                                     $base = $book->call_number ?? '';
@@ -226,11 +231,7 @@
                                         data-book-cost-price="<?php echo e(isset($book->cost_price) && $book->cost_price !== null ? '₱' . number_format($book->cost_price, 2) : '-'); ?>"
                                         data-book-total-copies="<?php echo e($book->total_copies); ?>" 
                                         data-book-available-copies="<?php echo e($book->available_copies); ?>"
-                                        data-book-control-numbers='<?php echo json_encode($book->control_numbers ?? [], 15, 512) ?>'
-                                        data-book-copy-status='<?php echo json_encode($book->copy_status ?? [], 15, 512) ?>'
-                                        data-book-copy-years='<?php echo json_encode($book->copy_years ?? [], 15, 512) ?>'
-                                        data-book-copy-conditions='<?php echo json_encode($book->copy_conditions ?? [], 15, 512) ?>'
-                                        data-book-lost-control-numbers='<?php echo json_encode($book->lost_control_numbers ?? [], 15, 512) ?>'
+                                        data-book-id="<?php echo e($book->id); ?>"
                                         data-bs-toggle="modal" data-bs-target="#viewBookModal">
                                         <i class="bi bi-eye"></i>
                                     </button>
@@ -925,10 +926,18 @@ document.addEventListener('DOMContentLoaded', function() {
                             const condition = (copyConditions && copyConditions[index]) ? copyConditions[index] : 'Brand New';
                             const conditionBadgeClass = condition.toLowerCase() === 'brand new' ? 'bg-success' : (condition.toLowerCase() === 'good' ? 'bg-info' : 'bg-warning text-dark');
                             
+                            // Handle unassigned control numbers
+                            let controlNumberDisplay = cn;
+                            if (cn && cn.startsWith('Unassigned-')) {
+                                controlNumberDisplay = `<span class="badge bg-secondary">Unassigned</span>`;
+                            } else {
+                                controlNumberDisplay = `<strong>${cn}</strong>`;
+                            }
+                            
                             const row = document.createElement('tr');
                             row.innerHTML = `
                                 <td>
-                                    <strong>${cn}</strong>
+                                    ${controlNumberDisplay}
                                 </td>
                                 <td>
                                     <span class="badge ${conditionBadgeClass}">${condition}</span>
@@ -1153,11 +1162,11 @@ document.addEventListener('DOMContentLoaded', function() {
             };
 
             // Handle number of copies change
-            copiesCountInput.addEventListener('change', function() {
+            copiesCountInput.addEventListener('input', function() {
                 const count = parseInt(this.value) || 0;
                 copiesYearsContainer.innerHTML = '';
                 
-                if (count > 0) {
+                if (count > 0 && count <= 1000) {
                     copiesYearsCard.style.display = 'block';
                     const baseYear = acquisitionYearInput.value && acquisitionYearInput.value.trim() !== '' ? acquisitionYearInput.value : new Date().getFullYear();
                     
@@ -1180,6 +1189,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                         });
                     });
+                } else if (count > 1000) {
+                    copiesYearsCard.style.display = 'none';
+                    this.value = 1000;
+                    this.dispatchEvent(new Event('input'));
                 } else {
                     copiesYearsCard.style.display = 'none';
                 }
@@ -1203,6 +1216,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 const formData = new FormData(this);
                 const action = this.getAttribute('action');
                 
+                console.log('Form action:', action);
+                console.log('Form data:', {
+                    additional_copies: formData.get('additional_copies'),
+                    acquisition_year: formData.get('acquisition_year')
+                });
+                
+                if (!action) {
+                    alert('Error: Form action not set. Please refresh and try again.');
+                    console.error('Form action is not set!');
+                    return;
+                }
+                
                 fetch(action, {
                     method: 'POST',
                     body: formData,
@@ -1211,17 +1236,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 })
                 .then(response => {
-                    if (response.ok || response.status === 302 || response.status === 301) {
-                        setTimeout(() => {
-                            location.reload();
-                        }, 300);
-                    } else {
-                        alert('Error adding copies. Please try again.');
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            console.error('Error response:', text);
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        });
                     }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Success response:', data);
+                    alert(data.message || 'Copies added successfully!');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 500);
                 })
                 .catch(err => {
-                    console.error('Error:', err);
-                    alert('Error adding copies. Please check the console.');
+                    console.error('Fetch error:', err);
+                    alert('Error adding copies: ' + err.message);
                 });
 
                 // Close modal

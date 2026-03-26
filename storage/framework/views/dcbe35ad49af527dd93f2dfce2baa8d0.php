@@ -61,16 +61,17 @@
                                     <option value="" selected disabled>Select a book...</option>
                                     <?php $__currentLoopData = $books; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $book): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                         <?php
-                                            $avail = $book->available_copies ?? $book->copies ?? 0;
-                                            $total = $book->copies ?? 0;
+                                            // Get accurate counts from the book model accessors
+                                            $available = $book->available_copies;
+                                            $total = $book->total_copies;
                                         ?>
                                         <option value="<?php echo e($book->_id ?? $book->id); ?>" 
                                                         data-title="<?php echo e($book->title); ?>" 
                                                         data-author="<?php echo e($book->author); ?>" 
-                                                        data-available-copies="<?php echo e($avail); ?>" 
+                                                        data-available-copies="<?php echo e($available); ?>" 
                                                         data-total-copies="<?php echo e($total); ?>"
                                                         data-control-numbers='<?php echo json_encode($book->control_numbers ?? [], 15, 512) ?>'>
-                                            <?php echo e($book->title); ?> (<?php echo e($avail); ?>/<?php echo e($total); ?> available)
+                                            <?php echo e($book->title); ?> (<?php echo e($available); ?>/<?php echo e($total); ?> available)
                                         </option>
                                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                 </select>

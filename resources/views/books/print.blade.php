@@ -164,10 +164,15 @@
     <tbody>
     @forelse($books as $i => $book)
         @php
+            // Fetch copies from database (source of truth)
+            // Ensure we get the loaded collection, not the relationship
+            $bookCopies = is_array($book->copies) || ($book->copies instanceof \Illuminate\Database\Eloquent\Collection) 
+                ? $book->copies 
+                : $book->copies()->get();
             $ctrlBase = '-';
-            if (!empty($book->control_numbers) && is_array($book->control_numbers) && count($book->control_numbers) > 0) {
-                $first = $book->control_numbers[0];
-                $parts = explode('-', $first);
+            if ($bookCopies && count($bookCopies) > 0) {
+                $first = $bookCopies[0];
+                $parts = explode('-', $first->control_number);
                 $base = $parts[0] ?? ($book->call_number ?? '');
             } else {
                 $base = $book->call_number ?? '';

@@ -217,26 +217,28 @@
                                         </tr>
                                     </thead>
                                     <tbody id="copiesContainer">
-                                        @foreach($book->control_numbers ?? [] as $cn)
-                                            @php
-                                                $copyYears = $book->copy_years ?? [];
-                                                $copyYear = isset($copyYears[$loop->index]) ? $copyYears[$loop->index] : '';
-                                                $copyConditions = $book->copy_conditions ?? [];
-                                                $copyCondition = isset($copyConditions[$loop->index]) ? $copyConditions[$loop->index] : 'Brand New';
-                                            @endphp
-                                            <tr>
-                                                <td><input type="text" name="control_numbers[]" class="form-control form-control-sm ctrl-number" value="{{ $cn }}" readonly></td>
-                                                <td><input type="number" name="copy_year[]" class="form-control form-control-sm copy-year-input" min="1900" max="2100" value="{{ $copyYear }}" placeholder="Enter year"></td>
-                                                <td><input type="text" name="copy_status[]" class="form-control form-control-sm" value="available"></td>
+                                        @forelse($copies as $copy)
+                                            <tr data-copy-id="{{ $copy->id }}">
+                                                <td><input type="text" name="control_numbers[]" class="form-control form-control-sm ctrl-number" value="{{ $copy->control_number }}" readonly></td>
+                                                <td><input type="number" name="copy_year[]" class="form-control form-control-sm copy-year-input" min="1900" max="2100" value="{{ $copy->acquisition_year }}" placeholder="Enter year"></td>
+                                                <td><input type="text" name="copy_status[]" class="form-control form-control-sm" value="{{ $copy->status }}" readonly></td>
                                                 <td>
-                                                    <select name="copy_condition[]" class="form-select form-select-sm">
-                                                        <option value="Brand New" {{ $copyCondition == 'Brand New' ? 'selected' : '' }}>Brand New</option>
-                                                        <option value="Old" {{ $copyCondition == 'Old' ? 'selected' : '' }}>Old</option>
+                                                    <select name="copy_condition[]" data-copy-id="{{ $copy->id }}" class="form-select form-select-sm copy-condition-select">
+                                                        <option value="Brand New" {{ $copy->condition === 'Brand New' ? 'selected' : '' }}>Brand New</option>
+                                                        <option value="Old" {{ $copy->condition === 'Old' ? 'selected' : '' }}>Old</option>
                                                     </select>
                                                 </td>
-                                                <td class="text-center"><button type="button" class="btn btn-sm btn-danger removeCopyBtn">&times;</button></td>
+                                                <td class="text-center">
+                                                    <button type="button" class="btn btn-sm btn-danger deleteCopyBtn" data-copy-id="{{ $copy->id }}" data-book-id="{{ $book->id }}">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </td>
                                             </tr>
-                                        @endforeach
+                                        @empty
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted py-3">No copies yet. Add copies using the button above.</td>
+                                            </tr>
+                                        @endforelse
                                     </tbody>
                                 </table>
                             </div>
@@ -258,8 +260,8 @@
         const otherInput = document.getElementById('other_category');
         const addCopyBtn = document.getElementById('addCopyBtn');
         const copiesContainer = document.getElementById('copiesContainer');
-        const callNumberInput = document.getElementById('call_number');
         const copiesInput = document.getElementById('copies');
+        const bookId = document.querySelector('form').action.split('/')[2]; // Extract book ID from form action
 
         function toggleOther() {
             if (categorySelect.value === 'other') {
@@ -270,7 +272,6 @@
                 otherInput.style.display = 'none';
                 otherInput.required = false;
                 otherInput.disabled = true;
-                // clear the input when hiding
                 otherInput.value = '';
             }
         }
@@ -288,58 +289,85 @@
             }
         }
 
-        function generateBase() {
-            let base = callNumberInput.value.trim();
-            if (!base) {
-                base = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
-            }
-            return base;
-        }
-
-        function updateControlNumbers() {
-            const base = generateBase();
-            const rows = copiesContainer.querySelectorAll('tr');
-            rows.forEach((row, idx) => {
-                const input = row.querySelector('input.ctrl-number');
-                if (input) {
-                    input.value = base + '-' + String(idx + 1).padStart(3, '0');
+        // Handle delete copy button clicks
+        copiesContainer.addEventListener('click', function(e) {
+            if (e.target.closest('.deleteCopyBtn')) {
+                const btn = e.target.closest('.deleteCopyBtn');
+                const copyId = btn.getAttribute('data-copy-id');
+                const bookIdAttr = btn.getAttribute('data-book-id');
+                const controlNumber = btn.closest('tr').querySelector('.ctrl-number').value;
+                
+                if (!confirm(`Delete copy ${controlNumber}?`)) {
+                    return;
                 }
-            });
-        }
-
-        function addCopyRow(ctrlValue = '', yearValue = '') {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><input type="text" name="control_numbers[]" class="form-control form-control-sm ctrl-number" value="${ctrlValue}" readonly></td>
-                <td><input type="number" name="copy_year[]" class="form-control form-control-sm copy-year-input" min="1900" max="2100" value="${yearValue}" placeholder="Enter year"></td>
-                <td><input type="text" name="copy_status[]" class="form-control form-control-sm" value="available"></td>
-                <td class="text-center"><button type="button" class="btn btn-sm btn-danger removeCopyBtn">&times;</button></td>
-            `;
-            copiesContainer.appendChild(row);
-            copiesInput.value = copiesContainer.querySelectorAll('tr').length;
-            updateControlNumbers();
-
-            // Add event listener to auto-fill other rows
-            const yearInput = row.querySelector('.copy-year-input');
-            yearInput.addEventListener('input', function() {
-                const yearValue = this.value;
-                // Fill all copy_year inputs with the same value
-                const allYearInputs = copiesContainer.querySelectorAll('.copy-year-input');
-                allYearInputs.forEach(input => {
-                    input.value = yearValue;
+                
+                const formData = new FormData();
+                formData.append('control_number', controlNumber);
+                
+                fetch(`/books/${bookIdAttr}/delete-copy`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.message || 'Failed to delete copy'));
+                    }
+                })
+                .catch(err => {
+                    console.error('Error:', err);
+                    alert('Error deleting copy: ' + err.message);
                 });
-            });
+            }
+        });
 
-            row.querySelector('.removeCopyBtn').addEventListener('click', function() {
-                row.remove();
-                copiesInput.value = copiesContainer.querySelectorAll('tr').length;
-                updateControlNumbers();
+        // Handle add copy button - open modal or redirect to add copies
+        addCopyBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const toAdd = prompt('Enter number of copies to add (1-1000):', '1');
+            if (toAdd === null) return;
+            
+            const count = parseInt(toAdd) || 0;
+            if (count < 1 || count > 1000) {
+                alert('Please enter a number between 1 and 1000');
+                return;
+            }
+            
+            // Show acquisition year input
+            const acquisitionYear = prompt('Enter acquisition year (optional):', new Date().getFullYear().toString());
+            
+            const formData = new FormData();
+            formData.append('additional_copies', count);
+            if (acquisitionYear) {
+                formData.append('acquisition_year', acquisitionYear);
+            }
+            
+            fetch(`/books/${bookId}/add-copies`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.message || 'Failed to add copies'));
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('Error adding copies: ' + err.message);
             });
-        }
-
-        addCopyBtn.addEventListener('click', function() {
-            const currentYear = new Date().getFullYear().toString();
-            addCopyRow('', currentYear);
         });
 
         // On page load, if category is custom (not in dropdown), add it as an option
@@ -358,86 +386,20 @@
 
         categorySelect.addEventListener('change', toggleOther);
         otherInput.addEventListener('input', syncOtherCategory);
-        callNumberInput.addEventListener('input', updateControlNumbers);
 
-
-        // Add copies instead of replacing
-        function handleAddCopies() {
-            const toAdd = parseInt(copiesInput.value) || 0;
-            if (toAdd > 0) {
-                const current = copiesContainer.querySelectorAll('tr').length;
-                const currentYear = new Date().getFullYear().toString();
-                for (let i = 0; i < toAdd; i++) {
-                    addCopyRow('', currentYear);
-                }
-                // Reset input to 0 after adding
-                copiesInput.value = 0;
-            }
-        }
-        copiesInput.addEventListener('change', handleAddCopies);
-        copiesInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                handleAddCopies();
-            }
-        });
-
-        // if there are existing rows already rendered (from Blade), sync copies input and update ctrl numbers
-        if (copiesContainer.querySelectorAll('tr').length > 0) {
-            copiesInput.value = copiesContainer.querySelectorAll('tr').length;
-            updateControlNumbers();
-            
-            // Fill empty year fields with current year and add event listeners
-            const currentYear = new Date().getFullYear().toString();
-            const yearInputs = copiesContainer.querySelectorAll('.copy-year-input');
-            yearInputs.forEach(yearInput => {
-                // Fill empty fields with current year
-                if (!yearInput.value || yearInput.value.trim() === '') {
-                    yearInput.value = currentYear;
-                }
-                
-                // Add event listener to auto-fill other rows
-                yearInput.addEventListener('input', function() {
-                    const yearValue = this.value;
-                    // Query fresh each time to get all inputs including dynamically added ones
-                    const allYearInputs = copiesContainer.querySelectorAll('.copy-year-input');
-                    allYearInputs.forEach(input => {
-                        input.value = yearValue;
-                    });
-                });
-            });
-            
-            // Add event listeners to remove buttons
-            copiesContainer.querySelectorAll('.removeCopyBtn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    this.closest('tr').remove();
-                    copiesInput.value = copiesContainer.querySelectorAll('tr').length;
-                    updateControlNumbers();
-                });
-            });
-        }
-
-        // Handle form submission - ensure custom category is properly selected and years are filled
+        // Handle form submission - ensure custom category is properly selected
         const formElement = document.querySelector('form');
         if (formElement) {
             formElement.addEventListener('submit', function(e) {
                 const selectedValue = categorySelect.value;
                 const customValue = otherInput.value.trim();
                 
-                // Ensure all copy year inputs have values (fill empty with current year)
-                const yearInputs = copiesContainer.querySelectorAll('input[name="copy_year[]"]');
-                const currentYear = new Date().getFullYear().toString();
-                yearInputs.forEach(input => {
-                    if (!input.value || input.value.trim() === '') {
-                        input.value = currentYear;
-                    }
-                });
-                
                 // If "other" is selected, custom value is required
                 if (selectedValue === 'other') {
                     if (!customValue) {
                         e.preventDefault();
                         otherInput.classList.add('is-invalid');
+                        alert('Please enter a custom category');
                         return false;
                     }
                     // Find or create the option

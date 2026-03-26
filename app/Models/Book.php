@@ -26,41 +26,17 @@ class Book extends Model
         'purchase_price',
         'acquisition_type',
         'condition',
-        'copy_status',
         'call_number',
         'available_copies',
 
         // ✅ NEW Dewey fields
         'dewey_decimal',
         'cutter_number',
-
-        // control numbers stored per copy
-        'control_numbers',
-        'copy_years',
-        'copy_conditions',
-        'lost_control_numbers',
     ];
 
-    protected $casts = [
-        'control_numbers' => 'array',
-        'copy_years' => 'array',
-        'copy_status' => 'array',
-        'copy_conditions' => 'array',
-        'lost_control_numbers' => 'array',
-    ];
+    protected $casts = [];
 
     protected $dates = ['deleted_at'];
-
-    /**
-     * Ensure copy_years is always an array
-     */
-    public function getCopyYearsAttribute($value)
-    {
-        if (is_null($value) || (is_array($value) && empty($value))) {
-            return [];
-        }
-        return is_array($value) ? $value : json_decode($value, true) ?? [];
-    }
 
     // ===== RELATIONSHIPS =====
     public function copies()
@@ -99,16 +75,8 @@ class Book extends Model
      */
     public function getTotalCopiesAttribute()
     {
-        // Use BookCopy records count as the source of truth
-        $totalFromBookCopy = $this->copies()->count();
-        
-        // If BookCopy records exist, use them; otherwise fallback to the copies field
-        if ($totalFromBookCopy > 0) {
-            return $totalFromBookCopy;
-        }
-        
-        // Fallback for records that don't have BookCopy entries yet
-        return $this->copies ?? 0;
+        // Use BookCopy records count as the single source of truth
+        return $this->copies()->count();
     }
 
     /**
@@ -116,18 +84,16 @@ class Book extends Model
      */
     public function markControlNumberAsLost($controlNumber)
     {
-        // Update BookCopy if it exists (new normalized structure)
+        // Update BookCopy (source of truth)
         $bookCopy = $this->getCopyByControlNumber($controlNumber);
         if ($bookCopy) {
-            $bookCopy->markAsLost();
+            $bookCopy->update([
+                'status' => 'lost',
+                'is_lost_damaged' => true,
+            ]);
+            return true;
         }
-        
-        // Also update the legacy JSON array for backward compatibility
-        $lostNumbers = $this->lost_control_numbers ?? [];
-        if (!in_array($controlNumber, $lostNumbers)) {
-            $lostNumbers[] = $controlNumber;
-            $this->update(['lost_control_numbers' => $lostNumbers]);
-        }
+        return false;
     }
 
     /**
@@ -135,8 +101,11 @@ class Book extends Model
      */
     public function isControlNumberLost($controlNumber)
     {
-        $lostNumbers = $this->lost_control_numbers ?? [];
-        return in_array($controlNumber, $lostNumbers);
+        $bookCopy = $this->getCopyByControlNumber($controlNumber);
+        if (!$bookCopy) {
+            return false;
+        }
+        return $bookCopy->status === 'lost' && $bookCopy->is_lost_damaged;
     }
 
     /**
@@ -144,30 +113,12 @@ class Book extends Model
      */
     public function getAvailableControlNumbers()
     {
-        // Use new BookCopy structure if available
-        if ($this->copies()->exists()) {
-            return $this->copies()
-                ->where('status', 'available')
-                ->where('is_lost_damaged', false)
-                ->pluck('control_number')
-                ->toArray();
-        }
-        
-        // Fallback to old array-based structure
-        if (!$this->control_numbers || !is_array($this->control_numbers)) {
-            return [];
-        }
-
-        $borrowedCtrls = $this->borrows()
-            ->whereNull('returned_at')
-            ->pluck('copy_number')
+        // Use BookCopy as the single source of truth
+        return $this->copies()
+            ->where('status', 'available')
+            ->where('is_lost_damaged', false)
+            ->pluck('control_number')
             ->toArray();
-
-        $lostCtrls = $this->lost_control_numbers ?? [];
-
-        return array_filter($this->control_numbers, function ($ctrl) use ($borrowedCtrls, $lostCtrls) {
-            return !in_array($ctrl, $borrowedCtrls) && !in_array($ctrl, $lostCtrls);
-        });
     }
 
     // ===== NEW METHODS FOR NORMALIZED STRUCTURE =====
@@ -290,4 +241,72 @@ class Book extends Model
             'repaired' => $this->copies()->where('status', 'repaired')->where('is_lost_damaged', false)->count(),
         ];
     }
+
+    /**
+     * Migrate JSON control numbers to BookCopy records (one-time migration)
+     * Call this for books that still have JSON data but no BookCopy records
+     */
+    public function migrateJsonToCopies()
+    {
+        // If book already has copies in database, skip migration
+        if ($this->copies()->count() > 0) {
+            return ['skipped' => true, 'message' => 'Book already has BookCopy records'];
+        }
+
+        // Get the JSON data
+        $controlNumbers = $this->control_numbers ?? [];
+        $copyYears = $this->copy_years ?? [];
+        $copyConditions = $this->copy_conditions ?? [];
+        $copyStatus = $this->copy_status ?? [];
+        $lostNumbers = $this->lost_control_numbers ?? [];
+
+        // Ensure they are arrays
+        if (is_string($controlNumbers)) {
+            $controlNumbers = json_decode($controlNumbers, true) ?? [];
+        }
+        if (is_string($copyYears)) {
+            $copyYears = json_decode($copyYears, true) ?? [];
+        }
+        if (is_string($copyConditions)) {
+            $copyConditions = json_decode($copyConditions, true) ?? [];
+        }
+        if (is_string($copyStatus)) {
+            $copyStatus = json_decode($copyStatus, true) ?? [];
+        }
+        if (is_string($lostNumbers)) {
+            $lostNumbers = json_decode($lostNumbers, true) ?? [];
+        }
+
+        if (empty($controlNumbers)) {
+            return ['skipped' => true, 'message' => 'No control numbers to migrate'];
+        }
+
+        // Create BookCopy records from JSON data
+        $created = 0;
+        foreach ($controlNumbers as $index => $controlNumber) {
+            // Get corresponding year, condition, status
+            $year = isset($copyYears[$index]) ? $copyYears[$index] : null;
+            $condition = isset($copyConditions[$index]) ? $copyConditions[$index] : null;
+            $status = isset($copyStatus[$index]) ? $copyStatus[$index] : 'available';
+            $isLost = in_array($controlNumber, $lostNumbers);
+
+            // Create the BookCopy record
+            BookCopy::create([
+                'book_id' => $this->id,
+                'control_number' => $controlNumber,
+                'acquisition_year' => $year ? (int)$year : null,
+                'status' => $isLost ? 'lost' : $status,
+                'condition' => $condition,
+                'is_lost_damaged' => $isLost,
+            ]);
+            $created++;
+        }
+
+        return [
+            'success' => true,
+            'message' => "Migrated {$created} copies from JSON to BookCopy table",
+            'count' => $created
+        ];
+    }
 }
+

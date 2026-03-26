@@ -60,11 +60,11 @@ Route::middleware(['auth'])->group(function () {
 
     Route::delete('books/distribute/{id}', [BookController::class, 'distributeDestroy'])->name('books.distribute.destroy');
     Route::get('books/print', [BookController::class, 'printAll'])->name('books.print');
-    Route::post('books/{book}/add-copies', [BookController::class, 'addCopies'])->name('books.addCopies');
-    Route::post('books/{book}/delete-copy', [BookController::class, 'deleteCopy'])->name('books.deleteCopy');
     Route::resource('books', BookController::class);
     Route::get('books/api/next-control-base', [BookController::class, 'getNextControlBase'])->name('books.api.nextControlBase');
     Route::get('books/catalog', [BookController::class, 'catalog'])->name('books.catalog');
+    Route::post('books/{bookId}/add-copies', [BookController::class, 'addCopies'])->name('books.addCopies');
+    Route::post('books/{bookId}/delete-copy', [BookController::class, 'deleteCopy'])->name('books.deleteCopy');
     // Original controller route
     Route::post('users/bulk-delete', [UserController::class, 'bulkDelete'])->name('users.bulkDelete');
     Route::resource('users', UserController::class);
