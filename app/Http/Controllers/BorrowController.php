@@ -13,9 +13,50 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Models\DistributedBook;
+use App\Models\BookCopy;
 
 class BorrowController extends Controller
 {
+    private function normalizeCopyNumber(?string $value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '' || strtoupper($value) === 'N/A') {
+            return null;
+        }
+        return $value;
+    }
+
+    private function pickAvailableCopy(Book $book, ?string $controlNumber = null): ?BookCopy
+    {
+        $query = $book->copies()
+            ->where('status', 'available')
+            ->where('is_lost_damaged', false);
+
+        if ($controlNumber !== null) {
+            $query->where('control_number', $controlNumber);
+        } else {
+            $query->orderByRaw("CASE WHEN control_number IS NULL THEN 1 ELSE 0 END")
+                ->orderBy('control_number');
+        }
+
+        return $query->first();
+    }
+
+    private function syncBookCounts(Book $book): void
+    {
+        $total = $book->copies()->count();
+        $available = $book->copies()
+            ->where('status', 'available')
+            ->where('is_lost_damaged', false)
+            ->count();
+
+        $book->forceFill([
+            'copies' => $total,
+            'available_copies' => $available,
+            'status' => $available > 0 ? 'available' : 'borrowed',
+        ])->save();
+    }
+
     // Show form to borrow a book
     public function create()
     {
@@ -111,80 +152,51 @@ class BorrowController extends Controller
                 $errors[] = "Book {$bookId} not found";
                 continue;
             }
-            // determine availability
-            $copies = $book->available_copies ?? $book->copies ?? 0;
-            if ($copies < 1) {
+
+            if ($book->available_copies < 1) {
                 $errors[] = "{$book->title} is out of stock";
                 continue;
             }
             try {
-                // Use provided control number if available, otherwise auto-assign
-                $controlNumber = $copyNumbers[$index] ?? null;
-                
-                // Validate that provided/auto-assigned control number is not lost
-                if ($controlNumber && $book->isControlNumberLost($controlNumber)) {
-                    $errors[] = "{$book->title}: Control number {$controlNumber} is marked as lost and cannot be borrowed";
+                $borrow = DB::transaction(function () use ($book, $bookId, $userId, $borrowDate, $returnDate, $copyNumbers, $index, &$errors) {
+                    $controlNumber = $this->normalizeCopyNumber($copyNumbers[$index] ?? null);
+
+                    $copyQuery = $book->copies()
+                        ->where('status', 'available')
+                        ->where('is_lost_damaged', false);
+                    if ($controlNumber !== null) {
+                        $copyQuery->where('control_number', $controlNumber);
+                    } else {
+                        $copyQuery->orderByRaw("CASE WHEN control_number IS NULL THEN 1 ELSE 0 END")
+                            ->orderBy('control_number');
+                    }
+
+                    $bookCopy = $copyQuery->lockForUpdate()->first();
+                    if (!$bookCopy) {
+                        $errors[] = "{$book->title}: No available copy to borrow" . ($controlNumber ? " (Ctrl# {$controlNumber})" : '');
+                        return null;
+                    }
+
+                    $borrow = Borrow::create([
+                        'user_id'     => $userId,
+                        'book_id'     => $bookId,
+                        'book_copy_id'=> $bookCopy->id,
+                        'borrowed_at' => $borrowDate,
+                        'due_date'    => $returnDate,
+                        'role'        => 'teacher',
+                        'origin'      => 'distribution',
+                        'copy_number' => $bookCopy->control_number,
+                    ]);
+
+                    $bookCopy->markAsBorrowed();
+                    $this->syncBookCounts($book);
+
+                    return $borrow;
+                });
+
+                if (!$borrow) {
                     continue;
                 }
-                
-                if (!$controlNumber && $book->control_numbers && is_array($book->control_numbers)) {
-                    // Count how many of this book are already borrowed (not returned)
-                    $borrowedCount = Borrow::where('book_id', $bookId)
-                        ->whereNull('returned_at')
-                        ->count();
-                    
-                    // Get the control number at the borrowed count index (next available)
-                    // Skip lost control numbers
-                    $lostCtrls = $book->lost_control_numbers ?? [];
-                    $availableIdx = 0;
-                    $ctrlToUse = null;
-                    
-                    for ($i = 0; $i < count($book->control_numbers); $i++) {
-                        if (!in_array($book->control_numbers[$i], $lostCtrls)) {
-                            if ($availableIdx == $borrowedCount) {
-                                $ctrlToUse = $book->control_numbers[$i];
-                                break;
-                            }
-                            $availableIdx++;
-                        }
-                    }
-                    
-                    if ($ctrlToUse) {
-                        $controlNumber = $ctrlToUse;
-                    } else if (!empty($book->control_numbers)) {
-                        // Fallback: use last non-lost control number
-                        for ($i = count($book->control_numbers) - 1; $i >= 0; $i--) {
-                            if (!in_array($book->control_numbers[$i], $lostCtrls)) {
-                                $controlNumber = $book->control_numbers[$i];
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if (!$controlNumber) {
-                        $errors[] = "{$book->title}: No available control numbers (all lost)";
-                        continue;
-                    }
-                }
-
-                $borrow = Borrow::create([
-                    'user_id'     => $userId,
-                    'book_id'     => $bookId,
-                    'borrowed_at' => $borrowDate,
-                    'due_date'    => $returnDate,
-                    'role'        => 'teacher',
-                    'origin'      => 'distribution',
-                    'copy_number' => $controlNumber,
-                ]);
-
-                // decrement inventory
-                $book->update([
-                    'available_copies' => max(0, ($book->available_copies ?? 0) - 1),
-                ]);
-                if (($book->available_copies ?? 0) < 1) {
-                    $book->status = 'borrowed';
-                }
-                $book->save();
 
                 ActivityLog::create([
                     'user_id' => Auth::id(),
@@ -282,74 +294,47 @@ class BorrowController extends Controller
 
             // Create borrow record
             try {
-                // Use provided control number if available, otherwise auto-assign
-                $controlNumber = $copyNumbers[$index] ?? null;
-                
-                // Validate that provided/auto-assigned control number is not lost
-                if ($controlNumber && $book->isControlNumberLost($controlNumber)) {
-                    $errorCount++;
-                    $errors[] = "{$book->title}: Control number {$controlNumber} is marked as lost and cannot be borrowed";
+                $borrow = DB::transaction(function () use ($book, $bookId, $userId, $borrowDate, $returnDate, $copyNumbers, $index, $borrowType, &$errorCount, &$errors) {
+                    $controlNumber = $this->normalizeCopyNumber($copyNumbers[$index] ?? null);
+
+                    $copyQuery = $book->copies()
+                        ->where('status', 'available')
+                        ->where('is_lost_damaged', false);
+                    if ($controlNumber !== null) {
+                        $copyQuery->where('control_number', $controlNumber);
+                    } else {
+                        $copyQuery->orderByRaw("CASE WHEN control_number IS NULL THEN 1 ELSE 0 END")
+                            ->orderBy('control_number');
+                    }
+
+                    $bookCopy = $copyQuery->lockForUpdate()->first();
+                    if (!$bookCopy) {
+                        $errorCount++;
+                        $errors[] = "{$book->title}: No available copy to borrow" . ($controlNumber ? " (Ctrl# {$controlNumber})" : '');
+                        return null;
+                    }
+
+                    $borrow = Borrow::create([
+                        'user_id'     => $userId,
+                        'book_id'     => $bookId,
+                        'book_copy_id'=> $bookCopy->id,
+                        'borrowed_at' => $borrowDate,
+                        'due_date'    => $returnDate,
+                        'returned_at' => null,
+                        'role'        => $borrowType,
+                        'origin'      => 'personal',
+                        'copy_number' => $bookCopy->control_number,
+                    ]);
+
+                    $bookCopy->markAsBorrowed();
+                    $this->syncBookCounts($book);
+
+                    return $borrow;
+                });
+
+                if (!$borrow) {
                     continue;
                 }
-                
-                if (!$controlNumber && $book->control_numbers && is_array($book->control_numbers)) {
-                    // Count how many of this book are already borrowed (not returned)
-                    $borrowedCount = Borrow::where('book_id', $bookId)
-                        ->whereNull('returned_at')
-                        ->count();
-                    
-                    // Get the control number at the borrowed count index (next available)
-                    // Skip lost control numbers
-                    $lostCtrls = $book->lost_control_numbers ?? [];
-                    $availableIdx = 0;
-                    $ctrlToUse = null;
-                    
-                    for ($i = 0; $i < count($book->control_numbers); $i++) {
-                        if (!in_array($book->control_numbers[$i], $lostCtrls)) {
-                            if ($availableIdx == $borrowedCount) {
-                                $ctrlToUse = $book->control_numbers[$i];
-                                break;
-                            }
-                            $availableIdx++;
-                        }
-                    }
-                    
-                    if ($ctrlToUse) {
-                        $controlNumber = $ctrlToUse;
-                    } else if (!empty($book->control_numbers)) {
-                        // Fallback: use last non-lost control number
-                        for ($i = count($book->control_numbers) - 1; $i >= 0; $i--) {
-                            if (!in_array($book->control_numbers[$i], $lostCtrls)) {
-                                $controlNumber = $book->control_numbers[$i];
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if (!$controlNumber) {
-                        $errorCount++;
-                        $errors[] = "{$book->title}: No available control numbers (all lost)";
-                        continue;
-                    }
-                }
-
-                $borrow = Borrow::create([
-                    'user_id'     => $userId,
-                    'book_id'     => $bookId,
-                    'borrowed_at' => $borrowDate,
-                    'due_date'    => $returnDate,
-                    'returned_at' => null,
-                    'role'        => $borrowType,
-                    'origin'      => 'personal',
-                    'copy_number' => $controlNumber,
-                ]);
-
-                // Update book status
-                 $book->available_copies =($book->available_copies ?? 1) - 1;
-                if ($book->available_copies < 1) {
-                    $book->status = 'borrowed';
-                }
-                $book->save();
 
                 // Log activity
                 $borrowerName = $isTeacher ? ($user->name ?? '') : trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
@@ -442,7 +427,7 @@ class BorrowController extends Controller
                 break;
             }
 
-            $borrow = Borrow::with(['book', 'user'])->where('id', $id)->first();
+            $borrow = Borrow::with(['book', 'user', 'bookCopy'])->where('id', $id)->first();
             if (!$borrow || $borrow->returned_at) continue;
 
             // Allow admin to add a remark; prefer admin input but fallback to computed remark
@@ -481,17 +466,37 @@ class BorrowController extends Controller
                     'role' => $borrow->role,
                     'origin' => $borrow->origin,
                 ]);
-
-                // Mark the control number as lost/unavailable for both lost and damaged books
-                if ($borrow->book) {
-                    $controlNumber = $borrow->copy_number ?? 'BK-' . $borrow->book_id;
-                    $borrow->book->markControlNumberAsLost($controlNumber);
-                }
             }
 
             // Mark as returned
-            $borrow->returned_at = now();
-            $borrow->save();
+            DB::transaction(function () use ($borrow) {
+                $bookCopy = $borrow->bookCopy;
+                if (!$bookCopy && $borrow->copy_number) {
+                    $bookCopy = BookCopy::where('book_id', $borrow->book_id)
+                        ->where('control_number', $borrow->copy_number)
+                        ->lockForUpdate()
+                        ->first();
+                } elseif ($bookCopy) {
+                    $bookCopy = BookCopy::where('id', $bookCopy->id)->lockForUpdate()->first();
+                }
+
+                if ($bookCopy) {
+                    if ($borrow->remark === 'Lost') {
+                        $bookCopy->markAsLost();
+                    } elseif ($borrow->remark === 'Damage') {
+                        $bookCopy->markAsDamaged();
+                    } else {
+                        $bookCopy->markAsAvailable();
+                    }
+                }
+
+                $borrow->returned_at = now();
+                $borrow->save();
+
+                if ($borrow->book) {
+                    $this->syncBookCounts($borrow->book);
+                }
+            });
 
             // Update user's remark if there's a remark from return (except 'No Remarks')
             if ($borrow->remark && $borrow->remark !== 'No Remarks') {
@@ -502,16 +507,8 @@ class BorrowController extends Controller
                 }
             }
 
-            // Safely update book status
-            if ($borrow->book) {
-                $borrow->book->status = 'available';
-                $borrow->book->update([
-                    'copies' => min(
-                    ($borrow->book->available_copies ?? 0) + 1,
-                    $borrow->book->copies ?? PHP_INT_MAX
-                )]);
-                $borrow->book->save();
-            } else {
+            // Safely update distributed book status (legacy table)
+            if (!$borrow->book) {
                 // Check if it's a distributed book
                 $distBook = DistributedBook::find($borrow->book_id);
                 if ($distBook) {
@@ -635,4 +632,3 @@ class BorrowController extends Controller
         return Borrow::STATUS_RETURNED_ON_TIME;
     }
 }
-

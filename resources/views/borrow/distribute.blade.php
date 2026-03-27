@@ -64,13 +64,20 @@
                                             // Get accurate counts from the book model accessors
                                             $available = $book->available_copies;
                                             $total = $book->total_copies;
+                                            $availableCtrls = $book->copies()
+                                                ->where('status', 'available')
+                                                ->where('is_lost_damaged', false)
+                                                ->whereNotNull('control_number')
+                                                ->orderBy('control_number')
+                                                ->pluck('control_number')
+                                                ->toArray();
                                         @endphp
                                         <option value="{{ $book->_id ?? $book->id }}" 
                                                         data-title="{{ $book->title }}" 
                                                         data-author="{{ $book->author }}" 
                                                         data-available-copies="{{ $available }}" 
                                                         data-total-copies="{{ $total }}"
-                                                        data-control-numbers='@json($book->control_numbers ?? [])'>
+                                                        data-control-numbers='@json($availableCtrls)'>
                                             {{ $book->title }} ({{ $available }}/{{ $total }} available)
                                         </option>
                                     @endforeach

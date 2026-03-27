@@ -211,13 +211,19 @@
                                             // Get accurate counts from the book model accessors
                                             $available = $book->available_copies;
                                             $total = $book->total_copies;
-                                            // Get borrowed control numbers for this book
-                                            $borrowedCtrls = $book->borrows()
-                                                ->whereNull('returned_at')
-                                                ->pluck('copy_number')
+                                            // Use BookCopy as source of truth for copy tracking
+                                            $availableCtrls = $book->copies()
+                                                ->where('status', 'available')
+                                                ->where('is_lost_damaged', false)
+                                                ->whereNotNull('control_number')
+                                                ->orderBy('control_number')
+                                                ->pluck('control_number')
                                                 ->toArray();
-                                            // Get lost control numbers for this book
-                                            $lostCtrls = $book->lost_control_numbers ?? [];
+                                            $untrackedAvailable = $book->copies()
+                                                ->where('status', 'available')
+                                                ->where('is_lost_damaged', false)
+                                                ->whereNull('control_number')
+                                                ->count();
                                         ?>
                                         <option value="<?php echo e($book->_id ?? $book->id); ?>"
                                                         data-title="<?php echo e($book->title); ?>"
@@ -226,9 +232,8 @@
                                                         data-isbn="<?php echo e($book->isbn ?? ''); ?>"
                                                         data-available-copies="<?php echo e($available); ?>"
                                                         data-total-copies="<?php echo e($total); ?>"
-                                                        data-control-numbers='<?php echo json_encode($book->control_numbers ?? [], 15, 512) ?>'
-                                                        data-borrowed-controls='<?php echo json_encode($borrowedCtrls, 15, 512) ?>'
-                                                        data-lost-controls='<?php echo json_encode($lostCtrls, 15, 512) ?>'>
+                                                        data-control-numbers='<?php echo json_encode($availableCtrls, 15, 512) ?>'
+                                                        data-untracked-available="<?php echo e($untrackedAvailable); ?>">
                                             <?php echo e($book->title); ?> (<?php echo e($available); ?>/<?php echo e($total); ?> available)
                                         </option>
                                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -421,8 +426,7 @@
                         author: opt.dataset.author || '',
                         publisher: opt.dataset.publisher || '',
                         controlNumbers: opt.dataset.controlNumbers ? JSON.parse(opt.dataset.controlNumbers) : [],
-                        borrowedControls: opt.dataset.borrowedControls ? JSON.parse(opt.dataset.borrowedControls) : [],
-                        lostControls: opt.dataset.lostControls ? JSON.parse(opt.dataset.lostControls) : []
+                        untrackedAvailable: parseInt(opt.dataset.untrackedAvailable || 0, 10) || 0
                     };
                 });
 
@@ -451,9 +455,7 @@
                     bookPublisher.value = data.publisher || '';
                     // Show control numbers - filter out borrowed ones and lost ones
                     if (data.controlNumbers && data.controlNumbers.length > 0) {
-                        const borrowedSet = new Set(data.borrowedControls || []);
-                        const lostSet = new Set(data.lostControls || []);
-                        const availableCtrls = data.controlNumbers.filter(ctrl => !borrowedSet.has(ctrl) && !lostSet.has(ctrl));
+                        const availableCtrls = data.controlNumbers.filter(ctrl => ctrl);
                         controlNumberSelect.innerHTML = '<option value="" disabled selected>Select a copy...</option>';
                         if (availableCtrls.length > 0) {
                             availableCtrls.forEach((ctrl) => {
@@ -475,7 +477,15 @@
                         controlNumberSelect.innerHTML = '<option value="" disabled selected>No copy tracking</option>';
                         controlNumberSelect.disabled = true;
                         addBookBtn.disabled = false;
-                        if (ctrlCopyHelp) ctrlCopyHelp.textContent = 'This book does not use copy numbers.';
+                        const availableCopies = parseInt(bookSelect?.selectedOptions?.[0]?.dataset?.availableCopies || 0, 10) || 0;
+                        const untracked = data?.untrackedAvailable || 0;
+                        if (ctrlCopyHelp) {
+                            if (availableCopies > 0 && untracked > 0) {
+                                ctrlCopyHelp.textContent = 'Copies exist but Ctrl# is not assigned yet. Assign control numbers in Books > Edit to enable copy tracking.';
+                            } else {
+                                ctrlCopyHelp.textContent = 'This book does not use copy numbers.';
+                            }
+                        }
                     }
                 }
 

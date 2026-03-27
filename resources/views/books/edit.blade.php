@@ -199,9 +199,14 @@
                         <div class="card-header">
                             <div class="d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">Physical Copies Details</h6>
-                                <button type="button" class="btn btn-sm btn-outline-primary" id="addCopyBtn">
-                                    <i class="bi bi-plus me-1"></i>Add Copy
-                                </button>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-danger" id="deleteSelectedCopiesBtn">
+                                        <i class="bi bi-trash me-1"></i>Delete Selected
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="addCopyBtn">
+                                        <i class="bi bi-plus me-1"></i>Add Copy
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div class="card-body p-0">
@@ -209,6 +214,9 @@
                                 <table class="table table-sm table-hover mb-0" id="copiesTable">
                                     <thead class="table-light">
                                         <tr>
+                                            <th style="width: 36px;" class="text-center">
+                                                <input type="checkbox" id="selectAllCopies" class="form-check-input" title="Select all">
+                                            </th>
                                             <th>Ctrl #</th>
                                             <th style="width: 20%;">Acquisition Year</th>
                                             <th style="width: 20%;">Status</th>
@@ -219,6 +227,9 @@
                                     <tbody id="copiesContainer">
                                         @forelse($copies as $copy)
                                             <tr data-copy-id="{{ $copy->id }}">
+                                                <td class="text-center">
+                                                    <input type="checkbox" class="form-check-input copy-select" value="{{ $copy->id }}" {{ $copy->status === 'borrowed' ? 'disabled' : '' }}>
+                                                </td>
                                                 <td><input type="text" name="control_numbers[]" class="form-control form-control-sm ctrl-number" value="{{ $copy->control_number }}" readonly></td>
                                                 <td><input type="number" name="copy_year[]" class="form-control form-control-sm copy-year-input" min="1900" max="2100" value="{{ $copy->acquisition_year }}" placeholder="Enter year"></td>
                                                 <td><input type="text" name="copy_status[]" class="form-control form-control-sm" value="{{ $copy->status }}" readonly></td>
@@ -229,14 +240,14 @@
                                                     </select>
                                                 </td>
                                                 <td class="text-center">
-                                                    <button type="button" class="btn btn-sm btn-danger deleteCopyBtn" data-copy-id="{{ $copy->id }}" data-book-id="{{ $book->id }}">
+                                                    <button type="button" class="btn btn-sm btn-danger deleteCopyBtn" data-copy-id="{{ $copy->id }}" data-book-id="{{ $book->id }}" {{ $copy->status === 'borrowed' ? 'disabled' : '' }}>
                                                         <i class="bi bi-trash"></i>
                                                     </button>
                                                 </td>
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="5" class="text-center text-muted py-3">No copies yet. Add copies using the button above.</td>
+                                                <td colspan="6" class="text-center text-muted py-3">No copies yet. Add copies using the button above.</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
@@ -259,9 +270,11 @@
         const categorySelect = document.getElementById('category');
         const otherInput = document.getElementById('other_category');
         const addCopyBtn = document.getElementById('addCopyBtn');
+        const deleteSelectedCopiesBtn = document.getElementById('deleteSelectedCopiesBtn');
         const copiesContainer = document.getElementById('copiesContainer');
         const copiesInput = document.getElementById('copies');
-        const bookId = document.querySelector('form').action.split('/')[2]; // Extract book ID from form action
+        const bookId = @json($book->id);
+        const selectAllCopies = document.getElementById('selectAllCopies');
 
         function toggleOther() {
             if (categorySelect.value === 'other') {
@@ -296,28 +309,37 @@
                 const copyId = btn.getAttribute('data-copy-id');
                 const bookIdAttr = btn.getAttribute('data-book-id');
                 const controlNumber = btn.closest('tr').querySelector('.ctrl-number').value;
+
+                if (btn.disabled) return;
                 
-                if (!confirm(`Delete copy ${controlNumber}?`)) {
+                const label = controlNumber ? controlNumber : '(unassigned)';
+                if (!confirm(`Delete copy ${label}?`)) {
                     return;
                 }
                 
                 const formData = new FormData();
-                formData.append('control_number', controlNumber);
+                formData.append('copy_id', copyId);
                 
                 fetch(`/books/${bookIdAttr}/delete-copy`, {
                     method: 'POST',
                     body: formData,
                     headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                        'Accept': 'application/json'
                     }
                 })
-                .then(response => response.json())
+                .then(async response => {
+                    const ct = response.headers.get('content-type') || '';
+                    if (ct.includes('application/json')) return response.json();
+                    const text = await response.text();
+                    throw new Error(text.slice(0, 180));
+                })
                 .then(data => {
                     if (data.success) {
                         alert(data.message);
                         location.reload();
                     } else {
-                        alert('Error: ' + (data.message || 'Failed to delete copy'));
+                        alert('Error: ' + (data.error || data.message || 'Failed to delete copy'));
                     }
                 })
                 .catch(err => {
@@ -325,6 +347,60 @@
                     alert('Error deleting copy: ' + err.message);
                 });
             }
+        });
+
+        // Select all / none
+        selectAllCopies?.addEventListener('change', function() {
+            const checks = Array.from(document.querySelectorAll('.copy-select'));
+            checks.forEach(cb => {
+                if (!cb.disabled) cb.checked = this.checked;
+            });
+        });
+
+        // Bulk delete selected copies
+        deleteSelectedCopiesBtn?.addEventListener('click', function(e) {
+            e.preventDefault();
+            const selected = Array.from(document.querySelectorAll('.copy-select:checked'))
+                .map(cb => cb.value);
+
+            if (selected.length === 0) {
+                alert('Select at least one copy to delete.');
+                return;
+            }
+
+            if (!confirm(`Delete ${selected.length} selected copy/copies? This will remove them from the database.`)) {
+                return;
+            }
+
+            const formData = new FormData();
+            selected.forEach(id => formData.append('copy_ids[]', id));
+
+            fetch(`/books/${bookId}/delete-copies`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(async r => {
+                const ct = r.headers.get('content-type') || '';
+                if (ct.includes('application/json')) return r.json();
+                const text = await r.text();
+                throw new Error(text.slice(0, 180));
+            })
+            .then(data => {
+                if (data.success) {
+                    alert(data.message || 'Deleted selected copies.');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.error || data.message || 'Failed to delete selected copies'));
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('Error deleting selected copies: ' + err.message);
+            });
         });
 
         // Handle add copy button - open modal or redirect to add copies
@@ -352,10 +428,16 @@
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    'Accept': 'application/json'
                 }
             })
-            .then(response => response.json())
+            .then(async response => {
+                const ct = response.headers.get('content-type') || '';
+                if (ct.includes('application/json')) return response.json();
+                const text = await response.text();
+                throw new Error(text.slice(0, 180));
+            })
             .then(data => {
                 if (data.success) {
                     alert(data.message);

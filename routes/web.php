@@ -65,6 +65,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('books/catalog', [BookController::class, 'catalog'])->name('books.catalog');
     Route::post('books/{bookId}/add-copies', [BookController::class, 'addCopies'])->name('books.addCopies');
     Route::post('books/{bookId}/delete-copy', [BookController::class, 'deleteCopy'])->name('books.deleteCopy');
+    Route::post('books/{bookId}/delete-copies', [BookController::class, 'deleteCopies'])->name('books.deleteCopies');
     // Original controller route
     Route::post('users/bulk-delete', [UserController::class, 'bulkDelete'])->name('users.bulkDelete');
     Route::resource('users', UserController::class);

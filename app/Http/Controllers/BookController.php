@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
 
 class BookController extends Controller
@@ -115,25 +116,54 @@ class BookController extends Controller
      */
     public function deleteCopy(Request $request, $bookId)
     {
-        $request->validate([
-            'control_number' => 'required|string',
+        $validator = Validator::make($request->all(), [
+            'copy_id' => 'nullable|integer',
+            'control_number' => 'nullable|string',
         ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
 
         $book = Book::findOrFail($bookId);
+        $copyId = $request->input('copy_id');
         $controlNumber = $request->input('control_number');
 
+        if (!$copyId && (!$controlNumber || trim((string) $controlNumber) === '')) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Missing copy_id or control_number',
+            ], 422);
+        }
+
         // Find and delete the BookCopy record
-        $bookCopy = $book->getCopyByControlNumber($controlNumber);
+        if ($copyId) {
+            $bookCopy = $book->copies()->where('id', $copyId)->first();
+        } else {
+            $bookCopy = $book->getCopyByControlNumber($controlNumber);
+        }
 
         if (!$bookCopy) {
             Log::error('BookCopy not found', [
                 'book_id' => $bookId,
                 'control_number' => $controlNumber,
+                'copy_id' => $copyId,
             ]);
             return response()->json([
                 'success' => false,
                 'error' => 'Copy not found'
             ], 404);
+        }
+
+        // Do not allow deleting an actively borrowed copy
+        if ($bookCopy->status === 'borrowed' || $bookCopy->borrows()->whereNull('returned_at')->exists()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Cannot delete a copy that is currently borrowed.',
+            ], 409);
         }
 
         // Archive the copy before deleting
@@ -150,20 +180,105 @@ class BookController extends Controller
         // Delete the copy
         $bookCopy->delete();
 
-        // Update book's total copies count
+        // Update book counts/status (keep integer fields in sync for legacy code)
         $newCopiesCount = $book->copies()->count();
-        $book->update(['copies' => $newCopiesCount]);
+        $newAvailableCount = $book->copies()->available()->count();
+        $book->update([
+            'copies' => $newCopiesCount,
+            'available_copies' => $newAvailableCount,
+            'status' => $newAvailableCount > 0 ? 'available' : 'borrowed',
+        ]);
 
         // Log activity
+        $ctrlForLog = $bookCopy->control_number ?: '(unassigned)';
         ActivityLog::create([
             'user_id' => Auth::id(),
             'action'  => 'Deleted Copy from Book',
-            'details' => "Deleted copy {$controlNumber} from '{$book->title}' (Remaining: {$newCopiesCount}) and archived it.",
+            'details' => "Deleted copy {$ctrlForLog} from '{$book->title}' (Remaining: {$newCopiesCount}) and archived it.",
         ]);
 
         return response()->json([
             'success' => true,
             'message' => "Successfully deleted and archived copy from {$book->title}"
+        ]);
+    }
+
+    /**
+     * Delete selected physical copies of a book (bulk)
+     */
+    public function deleteCopies(Request $request, $bookId)
+    {
+        $validator = Validator::make($request->all(), [
+            'copy_ids' => 'required|array|min:1',
+            'copy_ids.*' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $book = Book::findOrFail($bookId);
+        $copyIds = $request->input('copy_ids', []);
+
+        $copies = $book->copies()->whereIn('id', $copyIds)->get();
+        if ($copies->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No matching copies found for this book.',
+            ], 404);
+        }
+
+        $deleted = 0;
+        $skipped = [];
+
+        foreach ($copies as $copy) {
+            $hasActiveBorrow = $copy->status === 'borrowed' || $copy->borrows()->whereNull('returned_at')->exists();
+            if ($hasActiveBorrow) {
+                $skipped[] = $copy->control_number ?: "copy_id={$copy->id}";
+                continue;
+            }
+
+            BookArchive::create([
+                'title' => $book->title,
+                'author' => $book->author,
+                'isbn' => $book->isbn,
+                'publisher' => $book->publisher,
+                'year' => $copy->acquisition_year,
+                'ctrl_number' => $copy->control_number,
+                'condition' => $copy->condition,
+            ]);
+
+            $copy->delete();
+            $deleted++;
+        }
+
+        $newCopiesCount = $book->copies()->count();
+        $newAvailableCount = $book->copies()->available()->count();
+        $book->update([
+            'copies' => $newCopiesCount,
+            'available_copies' => $newAvailableCount,
+            'status' => $newAvailableCount > 0 ? 'available' : 'borrowed',
+        ]);
+
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action'  => 'Deleted Copies from Book',
+            'details' => "Deleted {$deleted} copy/copies from '{$book->title}' (Remaining: {$newCopiesCount}).",
+        ]);
+
+        $message = "Deleted {$deleted} copy/copies.";
+        if (!empty($skipped)) {
+            $message .= ' Skipped borrowed: ' . implode(', ', $skipped) . '.';
+        }
+
+        return response()->json([
+            'success' => true,
+            'deleted' => $deleted,
+            'skipped' => $skipped,
+            'message' => $message,
         ]);
     }
 
@@ -1267,4 +1382,3 @@ class BookController extends Controller
         return redirect()->route('books.lost-damage')->with('success', "History logs cleared. $deletedCount record(s) deleted.");
     }
 }
-
