@@ -107,6 +107,7 @@
                                         <a href="{{ route('teachers.edit', $teacher->id) }}" class="btn btn-sm btn-outline-dark" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </a>
+                                        @if(Auth::user() && Auth::user()->role === 'admin')
                                         <form action="{{ route('teachers.destroy', $teacher->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this teacher?');">
                                             @csrf
                                             @method('DELETE')
@@ -114,6 +115,7 @@
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>

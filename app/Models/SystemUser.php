@@ -13,6 +13,7 @@ class SystemUser extends Authenticatable
 
     protected $fillable = [
         'email',
+        'name',
         'password',
         'role',
     ];

@@ -250,7 +250,7 @@
                                 $strandDisplay = $strandDisplay ?: '-';
                             @endphp
                             <td>
-                                <span class="badge bg-secondary">{{ $gradeDisplay }}</span>
+                                <span class="">{{ $gradeDisplay }}</span>
                             </td>
                             <td>
                                 <span class="text-muted small">{{ $sectionDisplay }}</span>
@@ -270,7 +270,7 @@
                             <td>
                                 @if($activeBorrows->count() > 0)
                                     <div class="d-flex flex-wrap gap-1">
-                                        <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#borrowedBooksModal{{ $user->id }}">
+                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#borrowedBooksModal{{ $user->id }}">
                                             <i class="bi bi-book"></i>
                                         </button>
                                         <small class="text-muted">{{ $activeBorrows->count() }} book(s)</small>
@@ -372,31 +372,6 @@
                                 </span>
                             </td>
 
-                            <td class="d-none d-xl-table-cell">
-                                @php
-                                    // Get recent notes from returned books (last 30 days)
-                                    $recentReturns = $user->borrows->whereNotNull('returned_at')
-                                        ->where('returned_at', '>=', \Carbon\Carbon::now()->subDays(30))
-                                        ->whereNotNull('notes')
-                                        ->where('notes', '!=', '')
-                                        ->sortByDesc('returned_at')
-                                        ->take(1); // Show last 1 note
-                                @endphp
-
-                                @if($recentReturns->count() > 0)
-                                    <div>
-                                        @foreach($recentReturns as $return)
-                                            <div class="small text-muted">
-                                                <em>{{ Str::limit($return->notes, 40) }}</em>
-                                                <br><small>{{ $return->returned_at->format('M j') }}</small>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    <span class="text-muted">-</span>
-                                @endif
-                            </td>
-
                             <td class="text-center">
                                 <div class="btn-group" role="group">
                                     <a href="{{ route('users.show', $user) }}" class="btn btn-sm btn-outline-dark" title="View">
@@ -405,6 +380,7 @@
                                     <a href="{{ route('users.edit', $user) }}" class="btn btn-sm btn-outline-dark" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </a>
+                                    @if(Auth::user() && Auth::user()->role === 'admin')
                                     <form action="{{ route('users.destroy', $user) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this student?');">
                                         @csrf
                                         @method('DELETE')
@@ -412,12 +388,13 @@
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </form>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="11" class="text-center py-4">
+                            <td colspan="10" class="text-center py-4">
                                 <div class="text-muted">
                                     <i class="bi bi-person-x fs-1 d-block mb-2"></i>
                                     No students found.
@@ -440,9 +417,11 @@
                         {{ $users->withQueryString()->links('pagination::bootstrap-5') }}
                     </div>
                     <div>
+                        @if(Auth::user() && Auth::user()->role === 'admin')
                         <button type="submit" id="deleteSelectedUsersBtnBottom" class="btn btn-outline-danger d-none">
                             <i class="bi bi-trash me-1"></i>Delete Selected (<span id="selectedCountBottom">0</span>)
                         </button>
+                        @endif
                     </div>
                 </div>
             </form>

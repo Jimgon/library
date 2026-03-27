@@ -178,10 +178,10 @@
                         <i class="fas fa-sign-in-alt mr-2"></i>Login
                     </button>
                 </form>
-{{-- 
+
                 <div class="mt-6 text-center text-sm text-muted">
                     <a href="{{ route('admin.create') }}" class="text-primary hover:underline">Create admin account</a>
-                </div> --}}
+                </div>
 
             </div>
         </div>

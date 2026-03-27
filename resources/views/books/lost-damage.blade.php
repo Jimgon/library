@@ -246,6 +246,7 @@
                             <th>Book</th>
                             <th>Borrower</th>
                             <th>Borrowed Date</th>
+                            <th>Repaired/Handled By</th>
                             <th>Date</th>
                         </tr>
                     </thead>
@@ -277,6 +278,10 @@
                             <td>{{ $log->borrower }}</td>
 
                             <td>{{ $log->borrowed_date ? \Carbon\Carbon::parse($log->borrowed_date)->format('M d, Y') : '—' }}</td>
+
+                            <td>
+                                <small>{{ $log->borrower }}</small>
+                            </td>
 
                             <td>
                                 {{ \Carbon\Carbon::parse($log->created_at)->format('M d, Y h:i A') }}

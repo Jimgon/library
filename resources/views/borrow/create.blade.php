@@ -301,6 +301,28 @@
                     $('#student_select').select2({ width: '100%', placeholder: 'Select student...' });
                     $('#teacher_select').select2({ width: '100%', placeholder: 'Select teacher...' });
                     $('#book_select').select2({ width: '100%', placeholder: 'Select a book...' });
+                    $('#controlNumberSelect').select2({
+    width: '100%',
+    placeholder: 'Select a copy...',
+    tags: true, // allow typing
+    createTag: function (params) {
+        let term = $.trim(params.term);
+
+        // ❌ block non-numeric input
+        if (!/^\d+$/.test(term)) {
+            return null;
+        }
+
+        return {
+            id: term,
+            text: term,
+            newTag: true
+        };
+    }
+});
+ $(document).on('input', '.select2-search__field', function () {
+    this.value = this.value.replace(/[^0-9]/g, '');
+});
                 }
 
                 const studentSelect = document.getElementById('student_select');
@@ -463,6 +485,10 @@
                             controlNumberSelect.disabled = false;
                             addBookBtn.disabled = true; // Require control number selection
                             if (ctrlCopyHelp) ctrlCopyHelp.textContent = 'Select a copy to borrow.';
+                            // Reinitialize Select2 with new options
+                            if (window.jQuery) {
+                                $('#controlNumberSelect').val('').trigger('change');
+                            }
                         } else {
                             controlNumberSelect.disabled = true;
                             addBookBtn.disabled = true;
@@ -596,6 +622,10 @@
                     controlNumberSelect.value = '';
                     // Do NOT hide the control number section; just reset and disable the dropdown
                     controlNumberSelect.innerHTML = '<option value="" disabled selected>Select a copy...</option>';
+                    // Reinitialize Select2
+                    if (window.jQuery) {
+                        $('#controlNumberSelect').val('').trigger('change');
+                    }
                     controlNumberSelect.disabled = true;
                     if (window.jQuery) $('#book_select').val('').trigger('change');
                     selectedControlNumbers = [];

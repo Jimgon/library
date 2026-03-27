@@ -166,6 +166,18 @@ class UserController extends Controller
         return view('users.show', compact('user'));
     }
 
+    public function print(User $user)
+    {
+        $user->load('borrows.book');
+
+        $user->borrows->each(function($borrow) {
+            if ($borrow->borrowed_at) $borrow->borrowed_at = Carbon::parse($borrow->borrowed_at);
+            if ($borrow->due_date)    $borrow->due_date    = Carbon::parse($borrow->due_date);
+        });
+
+        return view('users.print-user', compact('user'));
+    }
+
     public function edit(User $user)
     {
         return view('users.edit_student', compact('user'));
@@ -273,6 +285,11 @@ public function printTeachers()
 }
     public function destroy(User $user)
     {
+        // Only admins can delete users/students
+        if (Auth::user() && Auth::user()->role !== 'admin') {
+            abort(403, 'Unauthorized. Only administrators can delete students.');
+        }
+
         $name = $user->first_name . ' ' . $user->last_name;
         $user->delete(); // Permanently deletes (no soft deletes)
 

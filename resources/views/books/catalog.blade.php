@@ -243,6 +243,7 @@
                                     <a href="{{ route('books.edit', $book->id) }}" class="btn btn-sm btn-outline-dark" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </a>
+                                    @if(Auth::user() && Auth::user()->role === 'admin')
                                     <form action="{{ route('books.destroy', $book->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this book?');">
                                         @csrf
                                         @method('DELETE')
@@ -250,6 +251,7 @@
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </form>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -278,9 +280,11 @@
                     {{ $books->withQueryString()->links('pagination::bootstrap-5') }}
                 </div>
                 <div>
+                    @if(Auth::user() && Auth::user()->role === 'admin')
                     <button type="button" id="deleteSelectedBtnBottom" class="btn btn-outline-danger" style="display: none;">
                         <i class="bi bi-trash me-1"></i>Delete Selected (<span id="selectedCountBottom">0</span>)
                     </button>
+                    @endif
                 </div>
             </div>
         </div>

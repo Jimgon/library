@@ -1252,7 +1252,7 @@ class BookController extends Controller
 
         // Get history logs (non-active records)
         $history = LostDamagedItem::where('status', '!=', 'active')
-            ->with(['borrow', 'book'])
+            ->with(['borrow', 'book', 'histories'])
             ->orderBy('created_at', 'desc')
             ->limit(50)
             ->get()
@@ -1273,12 +1273,26 @@ class BookController extends Controller
                     }
                 }
                 
+                // Get the user who performed the action (repaired/returned)
+                $performed_by = 'Unknown';
+                $latestHistory = $item->histories()->latest()->first();
+                if ($latestHistory && $latestHistory->created_by) {
+                    $actionUser = \App\Models\SystemUser::find($latestHistory->created_by);
+                    if (!$actionUser) {
+                        $actionUser = \App\Models\User::find($latestHistory->created_by);
+                    }
+                    if ($actionUser) {
+                        $performed_by = $actionUser->name ?? trim(($actionUser->first_name ?? '') . ' ' . ($actionUser->last_name ?? ''));
+                    }
+                }
+                
                 return (object) [
                     'type' => $item->type,
                     'action' => $item->status === 'returned' ? ($item->type === 'lost' ? 'Found' : 'Returned') : ucfirst($item->status),
                     'ctrl_number' => $item->borrow?->copy_number ?? $item->copy_number ?? 'N/A',
                     'book_title' => $item->book ? $item->book->title : 'Unknown',
                     'borrower' => $borrower_name,
+                    'performed_by' => $performed_by,
                     'borrowed_date' => $item->borrow?->borrowed_at,
                     'remarks' => $item->remarks ?? '—',
                     'created_at' => $item->created_at,

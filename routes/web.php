@@ -68,6 +68,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('books/{bookId}/delete-copies', [BookController::class, 'deleteCopies'])->name('books.deleteCopies');
     // Original controller route
     Route::post('users/bulk-delete', [UserController::class, 'bulkDelete'])->name('users.bulkDelete');
+    Route::get('users/{user}/print', [UserController::class, 'print'])->name('users.print-user');
     Route::resource('users', UserController::class);
     // Add named routes for students and teachers lists
     Route::get('users/teachers', [UserController::class, 'teachers'])->name('users.teachers');

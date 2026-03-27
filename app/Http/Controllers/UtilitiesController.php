@@ -61,6 +61,18 @@ class UtilitiesController extends Controller
                   ->orWhere('details', 'like', "%{$search}%");
         }
         
+        // Handle year filter
+        if (request('year')) {
+            $year = request('year');
+            $query->whereYear('created_at', $year);
+        }
+        
+        // Handle action filter
+        if (request('action_filter')) {
+            $action = request('action_filter');
+            $query->where('action', 'like', "%{$action}%");
+        }
+        
         $logs = $query->paginate(20);
         return view('utilities.activity-log', compact('logs'));
     }

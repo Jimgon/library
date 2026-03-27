@@ -30,6 +30,18 @@
             >
         </div>
 
+        <!-- Name -->
+        <div class="mb-3">
+            <label class="form-label">Name</label>
+            <input 
+                type="text" 
+                name="name" 
+                class="form-control" 
+                value="{{ old('name') }}" 
+                required
+            >
+        </div>
+
         <!-- Password -->
         <div class="mb-3">
             <label class="form-label">Password</label>

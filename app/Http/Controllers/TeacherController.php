@@ -103,6 +103,11 @@ class TeacherController extends Controller
 
     public function destroy(Teacher $teacher)
     {
+        // Only admins can delete teachers
+        if (Auth::user() && Auth::user()->role !== 'admin') {
+            abort(403, 'Unauthorized. Only administrators can delete teachers.');
+        }
+
         $name = $teacher->name;
         $teacher->delete();
         ActivityLog::create([

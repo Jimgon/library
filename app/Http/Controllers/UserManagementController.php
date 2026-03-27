@@ -30,12 +30,14 @@ class UserManagementController extends Controller
     {
         $request->validate([
             'email' => 'required|email|unique:system_users,email',
+            'name' => 'required|string|max:255',
             'role' => 'required|in:staff,admin',
             'password' => 'required|min:6',
         ]);
 
         $user = SystemUser::create([
             'email' => $request->email,
+            'name' => $request->name,
             'role'  => $request->role,
             'password' => bcrypt($request->password),
         ]);
@@ -46,7 +48,7 @@ class UserManagementController extends Controller
             'action' => 'create',
             'target_type' => 'staff',
             'target_id' => $user->id,
-            'details' => "Created staff/admin with email: {$user->email} and role: {$user->role}",
+            'details' => "Created staff/admin with name: {$user->name}, email: {$user->email} and role: {$user->role}",
         ]);
 
         return redirect()->route('staff.index')
@@ -118,6 +120,11 @@ class UserManagementController extends Controller
     // Delete staff/admin
     public function destroy($id)
     {
+        // Only admins can delete staff
+        if (Auth::user() && Auth::user()->role !== 'admin') {
+            abort(403, 'Unauthorized. Only administrators can delete staff.');
+        }
+
         $user = SystemUser::findOrFail($id);
 
         ActivityLog::create([

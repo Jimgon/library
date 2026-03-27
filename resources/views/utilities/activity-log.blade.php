@@ -6,11 +6,36 @@
         <h2 class="fw-bold mb-0" style="color:#111;">Activity Logs</h2>
     </div>
 
-    <!-- Search form -->
+    <!-- Search and Filter form -->
     <form method="GET" action="{{ route('utilities.logs') }}" class="mb-3">
-        <div class="input-group">
-            <input type="text" name="search" class="form-control" placeholder="Search logs..." value="{{ request('search') }}">
-            <button type="submit" class="btn btn-primary">Search</button>
+        <div class="row g-2">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <input type="text" name="search" class="form-control" placeholder="Search logs..." value="{{ request('search') }}">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="year" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Years</option>
+                    @php
+                        $currentYear = now()->year;
+                        for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                            $selected = request('year') == $year ? 'selected' : '';
+                            echo "<option value=\"$year\" $selected>$year</option>";
+                        }
+                    @endphp
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="action_filter" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Actions</option>
+                    <option value="created" {{ request('action_filter') === 'created' ? 'selected' : '' }}>Created</option>
+                    <option value="updated" {{ request('action_filter') === 'updated' ? 'selected' : '' }}>Updated</option>
+                    <option value="deleted" {{ request('action_filter') === 'deleted' ? 'selected' : '' }}>Deleted</option>
+                    <option value="viewed" {{ request('action_filter') === 'viewed' ? 'selected' : '' }}>Viewed</option>
+                </select>
+            </div>
         </div>
     </form>
 
@@ -37,7 +62,7 @@
                         <td>{{ $counter++ }}</td>
                         <td>
                             @if($log->user)
-                                {{ $log->user->email ?? 'System' }}
+                                {{ $log->user->name ?? $log->user->email ?? 'System' }}
                             @else
                                 System
                             @endif

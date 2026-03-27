@@ -90,7 +90,13 @@
 
                         <!-- Control Number Selection for Distribution -->
                         <div class="mb-3" id="distControlNumberSection" style="display: none;">
-                            <label class="form-label">Select Copies (Ctrl#)</label>
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <label class="form-label mb-0">Select Copies (Ctrl#)</label>
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="checkbox" id="selectAllCopies">
+                                    <label class="form-check-label" for="selectAllCopies" style="font-weight: 500; cursor: pointer;">Select All</label>
+                                </div>
+                            </div>
                             <div id="distControlNumberCheckboxes" class="d-flex flex-wrap gap-3"></div>
                             <small class="text-muted">Click the checkboxes of the copies you want to add.</small>
                         </div>
@@ -225,13 +231,37 @@
                                 checkboxDiv.appendChild(checkbox);
                                 checkboxDiv.appendChild(label);
                                 distControlNumberCheckboxes.appendChild(checkboxDiv);
+                                
+                                // Add change listener to each checkbox to update Select All state
+                                checkbox.addEventListener('change', updateSelectAllState);
                             });
+                            
+                            // Reset Select All checkbox
+                            document.getElementById('selectAllCopies').checked = false;
                         } else {
                             distControlNumberSection.style.display = 'none';
                         }
                     }
                     // Set max quantity to available copies
                     distBookQty.max = Math.max(1, availableCopies);
+                });
+
+                // Handle Select All checkbox
+                const selectAllCopies = document.getElementById('selectAllCopies');
+                
+                function updateSelectAllState() {
+                    const checkboxes = distControlNumberCheckboxes.querySelectorAll('input[type="checkbox"]');
+                    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                    const someChecked = Array.from(checkboxes).some(cb => cb.checked);
+                    selectAllCopies.checked = allChecked;
+                    selectAllCopies.indeterminate = someChecked && !allChecked;
+                }
+                
+                selectAllCopies.addEventListener('change', function(e) {
+                    e.preventDefault();
+                    const checkboxes = distControlNumberCheckboxes.querySelectorAll('input[type="checkbox"]');
+                    checkboxes.forEach(cb => cb.checked = this.checked);
+                    this.indeterminate = false;
                 });
 
                 addDistBookBtn.addEventListener('click', function(){
