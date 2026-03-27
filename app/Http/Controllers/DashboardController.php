@@ -48,38 +48,102 @@ class DashboardController extends Controller
             return $book;
         });
 
-        // Prepare data for Most Borrowed Books chart
+        // Prepare enhanced data for Most Borrowed Books chart
         $mostBorrowedBooks = Borrow::select('book_id')
             ->whereNotNull('book_id')
             ->get()
             ->groupBy('book_id')
-            ->map(fn($group) => count($group));
+            ->map(fn($group) => count($group))
+            ->sortDesc();
 
         $mostBorrowedBookLabels = [];
         $mostBorrowedBookData = [];
-
+        $mostBorrowedBookDetails = [];
+        $totalBorrowsCount = $totalBorrows;
+        
+        // Limit to top 10 for better readability
+        $topCount = 0;
         foreach ($mostBorrowedBooks as $bookId => $count) {
+            if ($topCount >= 10) break;
+            
             $book = Book::find($bookId);
             if ($book) {
-                $mostBorrowedBookLabels[] = $book->title;
+                $mostBorrowedBookLabels[] = strlen($book->title) > 30 ? substr($book->title, 0, 27) . '...' : $book->title;
                 $mostBorrowedBookData[] = $count;
+                
+                // Calculate additional metrics
+                $percentageOfTotal = $totalBorrowsCount > 0 ? round(($count / $totalBorrowsCount) * 100, 1) : 0;
+                $availableCopies = \App\Models\BookCopy::where('book_id', $book->id)
+                    ->where('status', 'available')
+                    ->where('is_lost_damaged', false)
+                    ->count();
+                $totalCopies = \App\Models\BookCopy::where('book_id', $book->id)->count();
+                
+                $mostBorrowedBookDetails[] = [
+                    'title' => $book->title,
+                    'author' => $book->author,
+                    'borrows' => $count,
+                    'percentage' => $percentageOfTotal,
+                    'available_copies' => $availableCopies,
+                    'total_copies' => $totalCopies
+                ];
+                
+                $topCount++;
             }
         }
+        
+        // Calculate aggregate statistics
+        $totalUniqueBooksInCatalog = Book::count();
+        $totalUniqueBooksBorrowed = $mostBorrowedBooks->count();
+        $avgBorrowsPerBook = $totalUniqueBooksBorrowed > 0 ? round($totalBorrowsCount / $totalUniqueBooksBorrowed, 1) : 0;
+        $mostBorrowedBookRecord = $mostBorrowedBookDetails[0] ?? null;
 
-        // Prepare monthly activity data
+        // Prepare monthly activity data with enhanced statistics
         $monthlyLabelsSafe = [];
         $monthlyDataSafe = [];
+        $monthlyActiveData = [];
+        $monthlyCompletedData = [];
+        $monthlyStats = [];
         
         // Get the last 12 months of borrow activity
         for ($i = 11; $i >= 0; $i--) {
             $date = now()->subMonths($i);
-            $monthlyLabelsSafe[] = $date->format('M Y');
+            $monthlyLabelsSafe[] = $date->format('M');
             
-            $count = Borrow::whereYear('created_at', $date->year)
+            // Total new borrows created in this month
+            $totalBorrows = Borrow::whereYear('created_at', $date->year)
                 ->whereMonth('created_at', $date->month)
                 ->count();
-            $monthlyDataSafe[] = $count;
+            
+            // Active borrows (not yet returned) created in this month
+            $activeBorrows = Borrow::whereYear('created_at', $date->year)
+                ->whereMonth('created_at', $date->month)
+                ->whereNull('returned_at')
+                ->count();
+            
+            // Completed returns in this month
+            $completedReturns = Borrow::whereYear('returned_at', $date->year)
+                ->whereMonth('returned_at', $date->month)
+                ->whereNotNull('returned_at')
+                ->count();
+            
+            $monthlyDataSafe[] = $totalBorrows;
+            $monthlyActiveData[] = $activeBorrows;
+            $monthlyCompletedData[] = $completedReturns;
+            
+            $monthlyStats[] = [
+                'month' => $date->format('M Y'),
+                'total' => $totalBorrows,
+                'active' => $activeBorrows,
+                'completed' => $completedReturns
+            ];
         }
+        
+        // Calculate aggregate statistics
+        $avgMonthlyActivity = !empty($monthlyDataSafe) ? array_sum($monthlyDataSafe) / count($monthlyDataSafe) : 0;
+        $peakMonthActivity = !empty($monthlyDataSafe) ? max($monthlyDataSafe) : 0;
+        $lowestMonthActivity = !empty($monthlyDataSafe) ? min($monthlyDataSafe) : 0;
+        $peakMonthIndex = !empty($monthlyDataSafe) ? array_key_last(array_filter($monthlyDataSafe, fn($v) => $v == $peakMonthActivity)) : -1;
 
         return view('dashboard', compact(
             'totalBooks',
@@ -89,8 +153,19 @@ class DashboardController extends Controller
             'availableBooks',
             'mostBorrowedBookLabels',
             'mostBorrowedBookData',
+            'mostBorrowedBookDetails',
+            'totalUniqueBooksBorrowed',
+            'avgBorrowsPerBook',
+            'mostBorrowedBookRecord',
             'monthlyLabelsSafe',
             'monthlyDataSafe',
+            'monthlyActiveData',
+            'monthlyCompletedData',
+            'avgMonthlyActivity',
+            'peakMonthActivity',
+            'lowestMonthActivity',
+            'peakMonthIndex',
+            'monthlyStats',
             'nearDueBorrows'
         ));
     }
