@@ -23,17 +23,17 @@
                 @csrf
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
-                        <label for="first_name" class="form-label">First Name</label>
+                        <label for="first_name" class="form-label">First Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="first_name" name="first_name" value="{{ old('first_name') }}" required>
                     </div>
                     <div class="col-md-6">
-                        <label for="last_name" class="form-label">Last Name</label>
+                        <label for="last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="last_name" name="last_name" value="{{ old('last_name') }}" required>
                     </div>
                 </div>
                 <div class="row g-3 mb-3">
                     <div class="col-md-3">
-                        <label for="grade_select" class="form-label">Grade</label>
+                        <label for="grade_select" class="form-label">Grade <span class="text-danger">*</span></label>
                         <select id="grade_select" name="grade" class="form-select">
 
                             @for($g = 7; $g <= 12; $g++)
@@ -54,11 +54,11 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label for="section_input" class="form-label">Section</label>
+                        <label for="section_input" class="form-label">Section <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="section_input" name="section" placeholder="e.g., A" value="{{ old('section') ?? (old('grade_section') ? preg_replace('/^.*[\-\/\s](.*)$/', '$1', old('grade_section')) : '') }}">
                     </div>
                     <div class="col-md-3">
-                        <label for="lrn" class="form-label">LRN</label>
+                        <label for="lrn" class="form-label">LRN <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="lrn" name="lrn" value="{{ old('lrn') }}" placeholder="Learner's Reference Number"
                                inputmode="numeric" pattern="^\d{1,12}$" maxlength="12"
                                oninput="this.value = this.value.replace(/\D/g, '').slice(0,12)">
@@ -67,8 +67,17 @@
                 {{-- hidden combined grade_section for backend compatibility --}}
                 <input type="hidden" name="grade_section" id="grade_section_hidden" value="{{ old('grade_section') }}">
                 <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <label for="phone_number" class="form-label">Phone Number</label>
+                    <div class="col-md-4">
+                        <label for="gender" class="form-label">Gender <span class="text-danger">*</span></label>
+                        <select class="form-select" id="gender" name="gender">
+                            <option value="">Select Gender</option>
+                            <option value="Male" {{ old('gender') == 'Male' ? 'selected' : '' }}>Male</option>
+                            <option value="Female" {{ old('gender') == 'Female' ? 'selected' : '' }}>Female</option>
+                            <option value="Other" {{ old('gender') == 'Other' ? 'selected' : '' }}>Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="phone_number" class="form-label">Phone Number <span class="text-danger">*</span></label>
                         <input type="tel" class="form-control" id="phone_number" name="phone_number" value="{{ old('phone_number') }}"
                                placeholder="09XXXXXXXXX"
                                pattern="^09\d{9}$"
@@ -76,8 +85,8 @@
                                inputmode="tel" maxlength="11"
                                oninput="this.value = this.value.replace(/\D/g, '').slice(0,11)">
                     </div>
-                    <div class="col-md-6">
-                        <label for="address" class="form-label">Address</label>
+                    <div class="col-md-4">
+                        <label for="address" class="form-label">Address <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="address" name="address" value="{{ old('address') }}">
                     </div>
                 </div>

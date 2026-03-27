@@ -4,11 +4,36 @@
         <h2 class="fw-bold mb-0" style="color:#111;">Activity Logs</h2>
     </div>
 
-    <!-- Search form -->
+    <!-- Search and Filter form -->
     <form method="GET" action="<?php echo e(route('utilities.logs')); ?>" class="mb-3">
-        <div class="input-group">
-            <input type="text" name="search" class="form-control" placeholder="Search logs..." value="<?php echo e(request('search')); ?>">
-            <button type="submit" class="btn btn-primary">Search</button>
+        <div class="row g-2">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <input type="text" name="search" class="form-control" placeholder="Search logs..." value="<?php echo e(request('search')); ?>">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="year" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Years</option>
+                    <?php
+                        $currentYear = now()->year;
+                        for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                            $selected = request('year') == $year ? 'selected' : '';
+                            echo "<option value=\"$year\" $selected>$year</option>";
+                        }
+                    ?>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="action_filter" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Actions</option>
+                    <option value="created" <?php echo e(request('action_filter') === 'created' ? 'selected' : ''); ?>>Created</option>
+                    <option value="updated" <?php echo e(request('action_filter') === 'updated' ? 'selected' : ''); ?>>Updated</option>
+                    <option value="deleted" <?php echo e(request('action_filter') === 'deleted' ? 'selected' : ''); ?>>Deleted</option>
+                    <option value="viewed" <?php echo e(request('action_filter') === 'viewed' ? 'selected' : ''); ?>>Viewed</option>
+                </select>
+            </div>
         </div>
     </form>
 
@@ -35,7 +60,7 @@
                         <td><?php echo e($counter++); ?></td>
                         <td>
                             <?php if($log->user): ?>
-                                <?php echo e($log->user->email ?? 'System'); ?>
+                                <?php echo e($log->user->name ?? $log->user->email ?? 'System'); ?>
 
                             <?php else: ?>
                                 System

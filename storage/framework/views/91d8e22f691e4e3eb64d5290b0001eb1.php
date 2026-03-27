@@ -244,6 +244,7 @@
                                     <a href="<?php echo e(route('books.edit', $book->id)); ?>" class="btn btn-sm btn-outline-dark" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </a>
+                                    <?php if(Auth::user() && Auth::user()->role === 'admin'): ?>
                                     <form action="<?php echo e(route('books.destroy', $book->id)); ?>" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this book?');">
                                         <?php echo csrf_field(); ?>
                                         <?php echo method_field('DELETE'); ?>
@@ -251,6 +252,7 @@
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </form>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
@@ -280,9 +282,11 @@
 
                 </div>
                 <div>
+                    <?php if(Auth::user() && Auth::user()->role === 'admin'): ?>
                     <button type="button" id="deleteSelectedBtnBottom" class="btn btn-outline-danger" style="display: none;">
                         <i class="bi bi-trash me-1"></i>Delete Selected (<span id="selectedCountBottom">0</span>)
                     </button>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

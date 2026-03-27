@@ -108,6 +108,7 @@
                                         <a href="<?php echo e(route('teachers.edit', $teacher->id)); ?>" class="btn btn-sm btn-outline-dark" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </a>
+                                        <?php if(Auth::user() && Auth::user()->role === 'admin'): ?>
                                         <form action="<?php echo e(route('teachers.destroy', $teacher->id)); ?>" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this teacher?');">
                                             <?php echo csrf_field(); ?>
                                             <?php echo method_field('DELETE'); ?>
@@ -115,6 +116,7 @@
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </form>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>

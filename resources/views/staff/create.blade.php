@@ -20,7 +20,7 @@
 
         <!-- Email -->
         <div class="mb-3">
-            <label class="form-label">Email</label>
+            <label class="form-label">Email <span class="text-danger">*</span></label>
             <input 
                 type="email" 
                 name="email" 
@@ -32,7 +32,7 @@
 
         <!-- Name -->
         <div class="mb-3">
-            <label class="form-label">Name</label>
+            <label class="form-label">Name <span class="text-danger">*</span></label>
             <input 
                 type="text" 
                 name="name" 
@@ -44,7 +44,7 @@
 
         <!-- Password -->
         <div class="mb-3">
-            <label class="form-label">Password</label>
+            <label class="form-label">Password <span class="text-danger">*</span></label>
             <input 
                 type="password" 
                 name="password" 
@@ -55,7 +55,7 @@
 
         <!-- Role -->
         <div class="mb-3">
-            <label class="form-label">Role</label>
+            <label class="form-label">Role <span class="text-danger">*</span></label>
             <select name="role" class="form-control" required>
                 
                 <option value="staff" {{ old('role') == 'staff' ? 'selected' : '' }}>Staff</option>

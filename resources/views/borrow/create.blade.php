@@ -4,13 +4,13 @@
     <div class="container-fluid">
         <style>
             /* Compact neutral UI */
-            .container.py-5 { max-width: 820px; }
+            .container.py-5 { max-width: 1400px; width: 100%; }
             .card { border-radius: .6rem; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); border: 1px solid #e9f0fb; background: #ffffff; }
-            .card-body { padding: 1rem !important; }
+            .card-body { padding: 1.5rem !important; }
             h4 { color: #0f172a; font-weight:600; font-size:1.05rem; margin-bottom:.35rem; }
             p.text-muted { color: #64748b; margin-bottom:.6rem; font-size:.9rem; }
             .form-label { font-size: .86rem; font-weight:500; color:#0f172a; }
-            .form-control, .form-select { border-radius: .45rem; border: 1px solid #eaf3ff; background: #fbfdff; transition: all .12s ease; box-shadow: none; padding:.45rem .6rem; font-size:.92rem; }
+            .form-control, .form-select { border-radius: .55rem; border: 1px solid #eaf3ff; background: #fbfdff; transition: all .12s ease; box-shadow: none; padding:.85rem 1.05rem; font-size:1.08rem; }
             .form-control:focus, .form-select:focus { outline: none; border-color: #93c5fd; box-shadow: 0 0 0 4px rgba(59,130,246,0.05); background: #fff; }
             .btn { border-radius: .5rem; transition: transform .06s ease, box-shadow .06s ease, background-color .12s ease; padding: .45rem .75rem; font-size:.92rem; }
             .btn:hover { transform: translateY(-1px); }
@@ -21,17 +21,22 @@
             .btn-outline-primary.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
             #cartList ul { padding-left: 0; margin:0; }
             #cartList li { transition: background .12s ease, transform .12s ease; padding: .45rem; border-radius: .45rem; margin-bottom: .4rem; background: #fff; border:1px solid #f4f7fb; display:flex; justify-content:space-between; align-items:center; }
-                    .nav-pills .nav-link { color: #000; }
-            .nav-pills .nav-link.active {
-                background-color: #000;
-                color: #fff;
-            }
+            .nav-pills { background: #f1f5f9; border-radius: .85rem; padding: .35rem; gap: .35rem; }
+            .nav-pills .nav-link { color: #0f172a; border-radius: .7rem; font-weight: 500; padding: .6rem 1rem; }
+            .nav-pills .nav-link.active { background-color: #0f172a; color: #fff; }
             #cartList li:hover { background: #f8fbff; transform: translateY(-1px); }
             #cartList .btn-outline-danger { border-color: transparent; color: #ef4444; background: transparent; padding: .2rem .45rem; }
             .badge.bg-secondary { background: #64748b; color: #fff; padding: .3rem .45rem; border-radius: .45rem; font-size:.85rem; }
+            .section-block { background: #f8fafc; border: 1px solid #eef2f7; border-radius: .9rem; padding: 1rem; }
+            .section-title { font-weight: 750; color: #0f172a; font-size: .98rem; margin: 0; }
+            .section-subtitle { color: #64748b; font-size: .9rem; margin: .15rem 0 0; }
             /* Select2 tweaks */ 
-            .select2-container .select2-selection--single { height: calc(1.25em + 1rem); border-radius: .45rem; padding: .25rem .45rem; border:1px solid #eaf3ff; background:#fbfdff; font-size:.94rem; }
-            .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.4; color: #0f172a; }
+            .select2-container .select2-selection--single { height: calc(1.75em + 1.7rem + 2px); border-radius: .55rem; border:1px solid #eaf3ff; background:#fbfdff; font-size:1.08rem; display:flex; align-items:center; padding: 0 1.05rem; }
+            .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.75; color: #0f172a; padding-left: 0; padding-right: 2.4rem; }
+            .select2-container--default .select2-selection--single .select2-selection__arrow { height: 100%; right: .45rem; }
+            .select2-container--default .select2-selection--single .select2-selection__placeholder { color: #64748b; }
+            .select2-container { width: 100% !important; }
+            .btn-add-book { min-width: 110px; white-space: normal; }
             @media (max-width: 767px) { .container.py-5 { padding-left: 1rem; padding-right:1rem; } .card-body { padding: .85rem !important; } }
         </style>
         {{-- Header Section --}}
@@ -103,54 +108,58 @@
                             <div class="tab-pane fade show active" id="student-borrow" role="tabpanel" aria-labelledby="student-tab">
 
                             <!-- ================= STUDENT INFO ================= -->
-                            <h6 class="fw-bold">Student Information</h6>
-                            <p class="text-muted small">Search student by their name to borrow books.</p>
-
-                            <div class="mb-3">
-                                <label class="form-label">Select Student</label>
-                                <select id="student_select" class="form-select">
-                                    <option value="" selected disabled>Select student...</option>
-                                    @foreach($users as $user)
-                                        <option value="{{ $user->_id ?? $user->id }}"
-                                                        data-first="{{ $user->first_name ?? '' }}"
-                                                        data-last="{{ $user->last_name ?? '' }}"
-                                                        data-lrn="{{ $user->lrn ?? '' }}"
-                                                        data-grade_section="{{ $user->grade_section ?? $user->year_level ?? '' }}"
-                                                        data-address="{{ $user->address ?? $user->course ?? '' }}">
-                                            {{ trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="row g-3 mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">LRN</label>
-                                    <input id="student_id_display" type="text" class="form-control" placeholder="N/A" readonly>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Student Name</label>
-                                    <input id="student_name_display" type="text" class="form-control" placeholder="N/A" readonly>
+                            <div class="section-block mb-4">
+                                <div class="mb-3">
+                                    <p class="section-title">Student Information</p>
+                                    <p class="section-subtitle">Search student by their name to borrow books.</p>
                                 </div>
 
-                                <div class="col-md-6">
-                                    <label class="form-label">Grade & Section</label>
-                                    <input id="student_year_display" type="text" class="form-control" placeholder="N/A" readonly>
+                                <div class="mb-3">
+                                    <label class="form-label mb-1">Select Student</label>
+                                    <select id="student_select" class="form-select">
+                                        <option value="" selected disabled>Select student...</option>
+                                        @foreach($users as $user)
+                                            <option value="{{ $user->_id ?? $user->id }}"
+                                                            data-first="{{ $user->first_name ?? '' }}"
+                                                            data-last="{{ $user->last_name ?? '' }}"
+                                                            data-lrn="{{ $user->lrn ?? '' }}"
+                                                            data-grade_section="{{ $user->grade_section ?? $user->year_level ?? '' }}"
+                                                            data-address="{{ $user->address ?? $user->course ?? '' }}">
+                                                {{ trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) }}
+                                            </option>
+                                        @endforeach
+                                    </select>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Address</label>
-                                    <input id="student_course_display" type="text" class="form-control" placeholder="N/A" readonly>
-                                </div>
-                            </div>
 
-                            <div class="row g-3 mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Borrow Date</label>
-                                    <input type="date" id="student_borrow_date" name="student_borrow_date" class="form-control" value="{{ date('Y-m-d') }}">
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label mb-1">LRN</label>
+                                        <input id="student_id_display" type="text" class="form-control" placeholder="N/A" readonly>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label mb-1">Student Name</label>
+                                        <input id="student_name_display" type="text" class="form-control" placeholder="N/A" readonly>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label mb-1">Grade & Section</label>
+                                        <input id="student_year_display" type="text" class="form-control" placeholder="N/A" readonly>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label mb-1">Address</label>
+                                        <input id="student_course_display" type="text" class="form-control" placeholder="N/A" readonly>
+                                    </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Due Date</label>
-                                    <input type="date" id="student_due_date" name="student_due_date" class="form-control" value="{{ date('Y-m-d', strtotime('+3 days')) }}">
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label mb-1">Borrow Date</label>
+                                        <input type="date" id="student_borrow_date" name="student_borrow_date" class="form-control" value="{{ date('Y-m-d') }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label mb-1">Due Date</label>
+                                        <input type="date" id="student_due_date" name="student_due_date" class="form-control" value="{{ date('Y-m-d', strtotime('+3 days')) }}">
+                                    </div>
                                 </div>
                             </div>
                             </div>
@@ -159,33 +168,37 @@
                             <div class="tab-pane fade" id="teacher-borrow" role="tabpanel" aria-labelledby="teacher-tab">
 
                             <!-- ================= TEACHER INFO ================= -->
-                            <h6 class="fw-bold">Teacher Information</h6>
-                            <p class="text-muted small">Search teacher by their name to borrow books.</p>
-                            <p class="text-muted small"><em>Teachers can borrow up to 3 books for personal use. For bulk/distribution, use the distribution page instead.</em></p>
-
-                            <div class="mb-3">
-                                <label class="form-label">Select Teacher</label>
-                                @if(isset($teachers) && $teachers->isEmpty())
-                                    <div class="alert alert-warning">No teachers available.</div>
-                                @endif
-                                <select id="teacher_select" class="form-select">
-                                    <option value="" selected disabled>Select teacher...</option>
-                                    @foreach($teachers as $user)
-                                        <option value="{{ $user->_id ?? $user->id }}">
-                                            {{ $user->name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="row g-3 mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Borrow Date</label>
-                                    <input type="date" id="teacher_borrow_date" name="teacher_borrow_date" class="form-control" value="{{ date('Y-m-d') }}">
+                            <div class="section-block mb-4">
+                                <div class="mb-3">
+                                    <p class="section-title">Teacher Information</p>
+                                    <p class="section-subtitle">Search teacher by their name to borrow books.</p>
+                                    <p class="section-subtitle"><em>Teachers can borrow up to 3 books for personal use. For bulk/distribution, use the distribution page instead.</em></p>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Due Date</label>
-                                    <input type="date" id="teacher_due_date" name="teacher_due_date" class="form-control" value="{{ date('Y-m-d', strtotime('+12 months')) }}">
+
+                                <div class="mb-3">
+                                    <label class="form-label mb-1">Select Teacher</label>
+                                    @if(isset($teachers) && $teachers->isEmpty())
+                                        <div class="alert alert-warning">No teachers available.</div>
+                                    @endif
+                                    <select id="teacher_select" class="form-select">
+                                        <option value="" selected disabled>Select teacher...</option>
+                                        @foreach($teachers as $user)
+                                            <option value="{{ $user->_id ?? $user->id }}">
+                                                {{ $user->name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label mb-1">Borrow Date</label>
+                                        <input type="date" id="teacher_borrow_date" name="teacher_borrow_date" class="form-control" value="{{ date('Y-m-d') }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label mb-1">Due Date</label>
+                                        <input type="date" id="teacher_due_date" name="teacher_due_date" class="form-control" value="{{ date('Y-m-d', strtotime('+12 months')) }}">
+                                    </div>
                                 </div>
                             </div>
                             </div>
@@ -194,91 +207,98 @@
                         <hr class="my-4">
 
                         <!-- ================= BOOK INFO ================= -->
-                        <h6 class="fw-bold">Book Information</h6>
-                        <p class="text-muted small">Search and select a book to borrow.</p>
-
-                        <div class="mb-3 juaify-content-center">
-                            <label class="form-label margin ">Select Book</label>
-                            <div class="d-flex gap-2" style="align-items: flex-start;">
-                                <select id="book_select" class="form-select mx-auto w-50">
-                                    <option value="" selected disabled>Select an option...</option>
-                                    @foreach($books as $book)
-                                        @php
-                                            // Get accurate counts from the book model accessors
-                                            $available = $book->available_copies;
-                                            $total = $book->total_copies;
-                                            // Use BookCopy as source of truth for copy tracking
-                                            $availableCtrls = $book->copies()
-                                                ->where('status', 'available')
-                                                ->where('is_lost_damaged', false)
-                                                ->whereNotNull('control_number')
-                                                ->orderBy('control_number')
-                                                ->pluck('control_number')
-                                                ->toArray();
-                                            $untrackedAvailable = $book->copies()
-                                                ->where('status', 'available')
-                                                ->where('is_lost_damaged', false)
-                                                ->whereNull('control_number')
-                                                ->count();
-                                        @endphp
-                                        <option value="{{ $book->_id ?? $book->id }}"
-                                                        data-title="{{ $book->title }}"
-                                                        data-author="{{ $book->author ?? '' }}"
-                                                        data-publisher="{{ $book->publisher ?? '' }}"
-                                                        data-isbn="{{ $book->isbn ?? '' }}"
-                                                        data-available-copies="{{ $available }}"
-                                                        data-total-copies="{{ $total }}"
-                                                        data-control-numbers='@json($availableCtrls)'
-                                                        data-untracked-available="{{ $untrackedAvailable }}">
-                                            {{ $book->title }} ({{ $available }}/{{ $total }} available)
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <button id="addBookBtn" type="button" class="btn btn-secondary">Add Book</button>
+                        <div class="section-block mb-4">
+                            <div class="mb-3">
+                                <p class="section-title">Book Information</p>
+                                <p class="section-subtitle">Search and select a book to borrow.</p>
                             </div>
-                            <small id="stockWarning" class="text-danger" style="display: none; margin-top: 0.5rem;">This book is out of stock.</small>
-                        </div>
 
-                        <!-- Control Number Selection -->
-                        <div class="mb-3" id="controlNumberSection">
-                            <label class="form-label">Select Copy (Ctrl#)</label>
-                            <select id="controlNumberSelect" class="form-select" disabled>
-                                <option value="" disabled selected>Select a copy...</option>
-                            </select>
-                            <small class="text-muted" id="ctrlCopyHelp">Select a copy to borrow.</small>
-                        </div>
+                            <div class="mb-3">
+                                <label class="form-label mb-1">Select Book</label>
+                                <div class="row g-2 align-items-stretch">
+                                    <div class="col-12 col-md">
+                                    <select id="book_select" class="form-select w-100">
+                                        <option value="" selected disabled>Select an option...</option>
+                                        @foreach($books as $book)
+                                            @php
+                                                // Get accurate counts from the book model accessors
+                                                $available = $book->available_copies;
+                                                $total = $book->total_copies;
+                                                // Use BookCopy as source of truth for copy tracking
+                                                $availableCtrls = $book->copies()
+                                                    ->where('status', 'available')
+                                                    ->where('is_lost_damaged', false)
+                                                    ->whereNotNull('control_number')
+                                                    ->orderBy('control_number')
+                                                    ->pluck('control_number')
+                                                    ->toArray();
+                                                $untrackedAvailable = $book->copies()
+                                                    ->where('status', 'available')
+                                                    ->where('is_lost_damaged', false)
+                                                    ->whereNull('control_number')
+                                                    ->count();
+                                            @endphp
+                                            <option value="{{ $book->_id ?? $book->id }}"
+                                                            data-title="{{ $book->title }}"
+                                                            data-author="{{ $book->author ?? '' }}"
+                                                            data-publisher="{{ $book->publisher ?? '' }}"
+                                                            data-isbn="{{ $book->isbn ?? '' }}"
+                                                            data-available-copies="{{ $available }}"
+                                                            data-total-copies="{{ $total }}"
+                                                            data-control-numbers='@json($availableCtrls)'
+                                                            data-untracked-available="{{ $untrackedAvailable }}">
+                                                {{ $book->title }} ({{ $available }}/{{ $total }} available)
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    </div>
+                                    <div class="col-12 col-md-auto d-grid">
+                                        <button id="addBookBtn" type="button" class="btn btn-secondary btn-add-book">Add Book</button>
+                                    </div>
+                                </div>
+                                <div id="stockWarning" class="text-danger small mt-2" style="display: none;">This book is out of stock.</div>
+                            </div>
 
-                            <div class="row g-3 mb-3 align-items-end" style="margin-left:0.25rem;margin-right:0.25rem;">
+                            <!-- Control Number Selection -->
+                            <div class="mb-3" id="controlNumberSection">
+                                <label class="form-label mb-1">Select Copy (Ctrl#)</label>
+                                <select id="controlNumberSelect" class="form-select" disabled>
+                                    <option value="" disabled selected>Select a copy...</option>
+                                </select>
+                                <div class="section-subtitle" id="ctrlCopyHelp">Select a copy to borrow.</div>
+                            </div>
+
+                            <div class="row g-3 mb-3 align-items-end">
                                 <div class="col-md-4">
-                                    <label class="form-label">Title</label>
+                                    <label class="form-label mb-1">Title</label>
                                     <input id="book_title" type="text" class="form-control" placeholder="N/A" readonly>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Author</label>
+                                    <label class="form-label mb-1">Author</label>
                                     <input id="book_author" type="text" class="form-control" placeholder="N/A" readonly>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Publisher</label>
+                                    <label class="form-label mb-1">Publisher</label>
                                     <input id="book_publisher" type="text" class="form-control" placeholder="N/A" readonly>
                                 </div>
                             </div>
 
-                            <!-- Buttons -->
-                            <div class="d-flex gap-2 mb-4">
-                                <button id="confirmBtn" type="submit" class="btn btn-primary flex-grow-1">Confirm (0)</button>
+                            <div class="d-grid">
+                                <button id="confirmBtn" type="submit" class="btn btn-primary">Confirm (0)</button>
+                            </div>
+                        </div>
+
+                        <!-- ================= BOOK LIST ================= -->
+                        <div class="section-block">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <p class="section-title mb-0">Books to Borrow</p>
+                                <span id="cartCount" class="badge bg-secondary">0</span>
                             </div>
 
-                            <!-- ================= BOOK LIST ================= -->
-                            <div class="border rounded p-3">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <strong>Books to Borrow</strong>
-                                    <span id="cartCount" class="badge bg-secondary">0</span>
-                                </div>
-
-                                <div id="cartList" class="text-muted small">
-                                    No books added yet.
-                                </div>
+                            <div id="cartList" class="text-muted small">
+                                No books added yet.
                             </div>
+                        </div>
 
                             <!-- hidden container for selected book ids -->
                             <div id="hiddenInputs"></div>
@@ -300,29 +320,57 @@
                 if (window.jQuery) {
                     $('#student_select').select2({ width: '100%', placeholder: 'Select student...' });
                     $('#teacher_select').select2({ width: '100%', placeholder: 'Select teacher...' });
-                    $('#book_select').select2({ width: '100%', placeholder: 'Select a book...' });
+
+                    const bookMatcher = function (params, data) {
+                        const term = $.trim(params.term || '');
+                        if (term === '') return data;
+                        if (!data || !data.element) return null;
+
+                        const el = data.element;
+                        const haystack = [
+                            data.text,
+                            el.getAttribute('data-title'),
+                            el.getAttribute('data-author'),
+                            el.getAttribute('data-publisher'),
+                            el.getAttribute('data-isbn'),
+                        ]
+                            .filter(Boolean)
+                            .join(' ')
+                            .toLowerCase();
+
+                        return haystack.includes(term.toLowerCase()) ? data : null;
+                    };
+
+                    const normalizeCtrl = function (value) {
+                        return String(value || '').replace(/[^0-9]/g, '');
+                    };
+
+                    const ctrlMatcher = function (params, data) {
+                        const term = $.trim(params.term || '');
+                        if (term === '') return data;
+                        const normalizedTerm = normalizeCtrl(term);
+                        const normalizedText = normalizeCtrl(data.text);
+                        return normalizedText.includes(normalizedTerm) ? data : null;
+                    };
+
+                    $('#book_select').select2({ width: '100%', placeholder: 'Select a book...', matcher: bookMatcher });
                     $('#controlNumberSelect').select2({
-    width: '100%',
-    placeholder: 'Select a copy...',
-    tags: true, // allow typing
-    createTag: function (params) {
-        let term = $.trim(params.term);
+                        width: '100%',
+                        placeholder: 'Select a copy...',
+                        matcher: ctrlMatcher,
+                        minimumResultsForSearch: 0,
+                    });
 
-        // ❌ block non-numeric input
-        if (!/^\d+$/.test(term)) {
-            return null;
-        }
-
-        return {
-            id: term,
-            text: term,
-            newTag: true
-        };
-    }
-});
- $(document).on('input', '.select2-search__field', function () {
-    this.value = this.value.replace(/[^0-9]/g, '');
-});
+                    // Restrict Ctrl# search input only (do not affect other Select2 inputs)
+                    $('#controlNumberSelect').on('select2:open', function () {
+                        const searchField = document.querySelector('.select2-container--open .select2-search__field');
+                        if (!searchField) return;
+                        if (searchField.dataset.ctrlFilterAttached === '1') return;
+                        searchField.dataset.ctrlFilterAttached = '1';
+                        searchField.addEventListener('input', function () {
+                            this.value = this.value.replace(/[^0-9-]/g, '');
+                        });
+                    });
                 }
 
                 const studentSelect = document.getElementById('student_select');
@@ -451,6 +499,23 @@
                 // Initialize button as disabled
                 addBookBtn.disabled = true;
 
+                function updateAddBookButtonState() {
+                    const bookId = bookSelect?.value || '';
+                    const bookData = bookMap[bookId];
+                    const availableCopies = parseInt(bookSelect?.selectedOptions?.[0]?.dataset?.availableCopies || 0, 10) || 0;
+
+                    if (!bookId || !bookData || availableCopies < 1) {
+                        addBookBtn.disabled = true;
+                        return;
+                    }
+
+                    if (bookData.controlNumbers && bookData.controlNumbers.length > 0) {
+                        addBookBtn.disabled = !controlNumberSelect?.value;
+                    } else {
+                        addBookBtn.disabled = false;
+                    }
+                }
+
                 function populateBookDetailsById(id){
                     const data = bookMap[id];
                     selectedControlNumbers = [];
@@ -489,6 +554,7 @@
                             if (window.jQuery) {
                                 $('#controlNumberSelect').val('').trigger('change');
                             }
+                            updateAddBookButtonState();
                         } else {
                             controlNumberSelect.disabled = true;
                             addBookBtn.disabled = true;
@@ -508,16 +574,13 @@
                                 ctrlCopyHelp.textContent = 'This book does not use copy numbers.';
                             }
                         }
+                        updateAddBookButtonState();
                     }
                 }
 
                 // Enable Add Book button when control number is selected
                 controlNumberSelect?.addEventListener('change', function() {
-                    if (this.value) {
-                        addBookBtn.disabled = false;
-                    } else {
-                        addBookBtn.disabled = true;
-                    }
+                    updateAddBookButtonState();
                 });
 
                 bookSelect?.addEventListener('change', function(e){
@@ -530,6 +593,7 @@
                         stockWarning.style.display = 'none';
                     }
                     populateBookDetailsById(this.value);
+                    updateAddBookButtonState();
                 });
 
                 // If legacy select exists (#book_id), keep it in sync
@@ -546,15 +610,18 @@
                 }
 
                 if (window.jQuery) {
+                    $('#controlNumberSelect').on('select2:select select2:clear', function(){
+                        updateAddBookButtonState();
+                    });
                     $('#book_select').on('select2:select', function(){ 
                         populateBookDetailsById(this.value); 
+                        updateAddBookButtonState();
                     });
                     $('#book_select').on('select2:unselecting', function(){
                         addBookBtn.disabled = true;
                         bookTitle.value = '';
                         bookAuthor.value = '';
                         bookPublisher.value = '';
-                        bookIsbn.value = '';
                     });
                 }
 

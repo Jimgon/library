@@ -252,7 +252,7 @@
                                 $strandDisplay = $strandDisplay ?: '-';
                             ?>
                             <td>
-                                <span class="badge bg-secondary"><?php echo e($gradeDisplay); ?></span>
+                                <span class=""><?php echo e($gradeDisplay); ?></span>
                             </td>
                             <td>
                                 <span class="text-muted small"><?php echo e($sectionDisplay); ?></span>
@@ -272,7 +272,7 @@
                             <td>
                                 <?php if($activeBorrows->count() > 0): ?>
                                     <div class="d-flex flex-wrap gap-1">
-                                        <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#borrowedBooksModal<?php echo e($user->id); ?>">
+                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#borrowedBooksModal<?php echo e($user->id); ?>">
                                             <i class="bi bi-book"></i>
                                         </button>
                                         <small class="text-muted"><?php echo e($activeBorrows->count()); ?> book(s)</small>
@@ -378,31 +378,6 @@
                                 </span>
                             </td>
 
-                            <td class="d-none d-xl-table-cell">
-                                <?php
-                                    // Get recent notes from returned books (last 30 days)
-                                    $recentReturns = $user->borrows->whereNotNull('returned_at')
-                                        ->where('returned_at', '>=', \Carbon\Carbon::now()->subDays(30))
-                                        ->whereNotNull('notes')
-                                        ->where('notes', '!=', '')
-                                        ->sortByDesc('returned_at')
-                                        ->take(1); // Show last 1 note
-                                ?>
-
-                                <?php if($recentReturns->count() > 0): ?>
-                                    <div>
-                                        <?php $__currentLoopData = $recentReturns; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $return): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                            <div class="small text-muted">
-                                                <em><?php echo e(Str::limit($return->notes, 40)); ?></em>
-                                                <br><small><?php echo e($return->returned_at->format('M j')); ?></small>
-                                            </div>
-                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                                    </div>
-                                <?php else: ?>
-                                    <span class="text-muted">-</span>
-                                <?php endif; ?>
-                            </td>
-
                             <td class="text-center">
                                 <div class="btn-group" role="group">
                                     <a href="<?php echo e(route('users.show', $user)); ?>" class="btn btn-sm btn-outline-dark" title="View">
@@ -411,6 +386,7 @@
                                     <a href="<?php echo e(route('users.edit', $user)); ?>" class="btn btn-sm btn-outline-dark" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </a>
+                                    <?php if(Auth::user() && Auth::user()->role === 'admin'): ?>
                                     <form action="<?php echo e(route('users.destroy', $user)); ?>" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this student?');">
                                         <?php echo csrf_field(); ?>
                                         <?php echo method_field('DELETE'); ?>
@@ -418,12 +394,13 @@
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </form>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <tr>
-                            <td colspan="11" class="text-center py-4">
+                            <td colspan="10" class="text-center py-4">
                                 <div class="text-muted">
                                     <i class="bi bi-person-x fs-1 d-block mb-2"></i>
                                     No students found.
@@ -447,9 +424,11 @@
 
                     </div>
                     <div>
+                        <?php if(Auth::user() && Auth::user()->role === 'admin'): ?>
                         <button type="submit" id="deleteSelectedUsersBtnBottom" class="btn btn-outline-danger d-none">
                             <i class="bi bi-trash me-1"></i>Delete Selected (<span id="selectedCountBottom">0</span>)
                         </button>
+                        <?php endif; ?>
                     </div>
                 </div>
             </form>

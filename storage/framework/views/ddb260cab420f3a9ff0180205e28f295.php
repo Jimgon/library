@@ -1,5 +1,3 @@
-
-
 <?php $__env->startSection('content'); ?>
 <div class="container-fluid py-4">
 
@@ -244,6 +242,7 @@
                             <th>Book</th>
                             <th>Borrower</th>
                             <th>Borrowed Date</th>
+                            <th>Repaired/Handled By</th>
                             <th>Date</th>
                         </tr>
                     </thead>
@@ -276,6 +275,10 @@
                             <td><?php echo e($log->borrower); ?></td>
 
                             <td><?php echo e($log->borrowed_date ? \Carbon\Carbon::parse($log->borrowed_date)->format('M d, Y') : '—'); ?></td>
+
+                            <td>
+                                <small><?php echo e($log->borrower); ?></small>
+                            </td>
 
                             <td>
                                 <?php echo e(\Carbon\Carbon::parse($log->created_at)->format('M d, Y h:i A')); ?>
