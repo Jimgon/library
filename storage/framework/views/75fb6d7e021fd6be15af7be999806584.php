@@ -66,7 +66,7 @@
     </div>
 
     
-    <form id="searchForm" method="GET" action="<?php echo e(route('books.index')); ?>" class="mb-4">
+    <form id="searchForm" method="GET" action="<?php echo e(route('books.catalog')); ?>" class="mb-4">
         <div class="row g-2">
             <div class="col-md-3">
                 <input

@@ -258,6 +258,7 @@ class BorrowController extends Controller
 
         // Prevent borrowing if they already have the max active borrows
         $activeBorrowCount = Borrow::where('user_id', $userId)
+            ->where('role', $borrowType)
             ->whereNull('returned_at')
             ->count();
         

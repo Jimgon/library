@@ -26,7 +26,7 @@
         <button type="submit" class="btn btn-success">
             <i class="bi bi-upload"></i> Import
         </button>
-        <a href="{{ route('books.index') }}" class="btn btn-secondary ms-2">Cancel</a>
+        <a href="{{ route('books.catalog') }}" class="btn btn-secondary ms-2">Cancel</a>
     </form>
 </div>
 @endsection

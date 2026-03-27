@@ -57,6 +57,7 @@ class TeacherBorrowController extends Controller
 
             $alreadyBorrowed = Borrow::where('user_id', $request->user_id)
                 ->where('book_id', $bookId)
+                ->where('role', 'teacher')
                 ->whereNull('returned_at')
                 ->exists();
             if ($alreadyBorrowed) {
@@ -151,7 +152,7 @@ class TeacherBorrowController extends Controller
             $borrow->book->status = 'available';
             $borrow->book->save();
         }
-        return redirect()->route('books.index')->with('success', 'Book returned successfully!');
+        return redirect()->route('books.catalog')->with('success', 'Book returned successfully!');
     }
 
     /**
@@ -186,4 +187,3 @@ class TeacherBorrowController extends Controller
         return Borrow::STATUS_RETURNED_ON_TIME;
     }
 }
-

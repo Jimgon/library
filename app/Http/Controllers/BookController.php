@@ -381,13 +381,27 @@ class BookController extends Controller
             ->orderBy('category', 'asc')
             ->pluck('category');
 
-        return view('books.index', compact('books', 'categories'));
+        return view('books.catalog', compact('books', 'categories'));
     }
 
     public function catalog(Request $request)
     {
         // Don't filter by status - show all books in catalog regardless of availability
         $query = Book::query();
+
+        // Field-specific filters (used by Book Inventory search form)
+        if ($request->filled('title')) {
+            $query->where('title', 'like', '%' . $request->input('title') . '%');
+        }
+        if ($request->filled('author')) {
+            $query->where('author', 'like', '%' . $request->input('author') . '%');
+        }
+        if ($request->filled('publisher')) {
+            $query->where('publisher', 'like', '%' . $request->input('publisher') . '%');
+        }
+        if ($request->filled('category')) {
+            $query->where('category', $request->input('category'));
+        }
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -398,10 +412,6 @@ class BookController extends Controller
                   ->orWhere('category', 'like', "%{$search}%")
                   ->orWhere('isbn', 'like', "%{$search}%");
             });
-        }
-
-        if ($request->filled('category')) {
-            $query->where('category', $request->category);
         }
 
         $books = $query

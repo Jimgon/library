@@ -80,7 +80,7 @@
 
 
     
-    <form id="searchForm" method="GET" action="<?php echo e(route('books.index')); ?>" class="mb-4">
+    <form id="searchForm" method="GET" action="<?php echo e(route('books.catalog')); ?>" class="mb-4">
         <div class="row g-2">
             <div class="col-md-3">
                 <input
@@ -111,7 +111,7 @@
             </div>
             <div class="col-md-2">
                 <?php
-                    $categories = $books->pluck('category')->filter()->unique()->sort()->values();
+                    $categories = collect($allCategories ?? [])->filter()->unique()->sort()->values();
                 ?>
                 <select name="category" class="form-select">
                     <option value="">All Categories</option>
@@ -1473,6 +1473,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
 });
 </script>
-
 
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\user\Herd\library\resources\views/books/catalog.blade.php ENDPATH**/ ?>

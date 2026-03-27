@@ -198,8 +198,8 @@
         </button>
 
         <div class="collapse ps-3 {{ request()->routeIs('books.*') ? 'show' : '' }}" id="booksMenu">
-            {{-- <a class="nav-link{{ request()->routeIs('books.index') ? ' active' : '' }}"
-               href="{{ route('books.index') }}">
+            {{-- <a class="nav-link{{ request()->routeIs('books.catalog') ? ' active' : '' }}"
+               href="{{ route('books.catalog') }}">
                 <i class="fas fa-book"></i> Book     Inventory
             </a> --}}
 

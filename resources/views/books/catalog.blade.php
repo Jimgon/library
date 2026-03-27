@@ -80,7 +80,7 @@
 
 
     {{-- Search Form --}}
-    <form id="searchForm" method="GET" action="{{ route('books.index') }}" class="mb-4">
+    <form id="searchForm" method="GET" action="{{ route('books.catalog') }}" class="mb-4">
         <div class="row g-2">
             <div class="col-md-3">
                 <input
@@ -111,7 +111,7 @@
             </div>
             <div class="col-md-2">
                 @php
-                    $categories = $books->pluck('category')->filter()->unique()->sort()->values();
+                    $categories = collect($allCategories ?? [])->filter()->unique()->sort()->values();
                 @endphp
                 <select name="category" class="form-select">
                     <option value="">All Categories</option>
@@ -1471,4 +1471,3 @@ document.addEventListener('DOMContentLoaded', function() {
 
 });
 </script>
-
